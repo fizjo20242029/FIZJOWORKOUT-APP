@@ -609,7 +609,7 @@ with st.sidebar:
 
     st.header("⚙️ Konfiguracja")
     
-    profil = st.selectbox("Profil Silnika:", [
+    profil = st.selectbox("Wybierz charakter ćwiczeń:", [
         "FIZJO: Kompleksowy (Wszystkie partie)", 
         "FIZJO: Ukierunkowany - Tylko Oddechowe",
         "FIZJO: Ukierunkowany - Tylko Głowa/Szyja",
