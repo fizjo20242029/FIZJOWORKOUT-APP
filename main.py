@@ -589,7 +589,7 @@ def generuj_excel(liczba_dni):
 # ==============================================================================
 # UI - INTERFEJS APLIKACJI MOBILNEJ / WEBOWEJ
 # ==============================================================================
-st.title("Fizjo Workout Ultimate")
+st.title("Fizjo Workout Ultimate K.T.")
 st.markdown("Zintegrowane środowisko projektowania programów treningowych.")
 
 # MENU BOCZNE
