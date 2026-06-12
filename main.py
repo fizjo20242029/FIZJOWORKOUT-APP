@@ -25,13 +25,6 @@ if 'historia_wiadomosci' not in st.session_state:
         {"role": "system", "content": "Jesteś wirtualnym asystentem w aplikacji dla fizjoterapeutów i trenerów 'Fizjo Workout Ultimate'. Pomagasz profesjonalnie i zwięźle. Język: polski."}
     ]
 
-# Inicjalizacja klienta Groq. Pamiętaj o wklejeniu klucza!
-GROQ_API_KEY = "TUTAJ_WKLEJ_SWOJ_KLUCZ_GROQ" 
-try:
-    groq_client = Groq(api_key=GROQ_API_KEY)
-except:
-    groq_client = None
-
 # ==============================================================================
 # BAZY DANYCH
 # ==============================================================================
@@ -272,8 +265,22 @@ st.title("Fizjo Workout Ultimate")
 st.markdown("Zintegrowane środowisko projektowania programów treningowych.")
 
 # MENU BOCZNE
+# MENU BOCZNE
 with st.sidebar:
-    st.header("⚙️ Konfiguracja")
+    st.header("🔑 Dostęp do AI")
+    user_api_key = st.text_input("Twój klucz API Groq:", type="password", help="Pobierz darmowy klucz ze strony console.groq.com")
+    
+    # Próba logowania podanym kluczem
+    groq_client = None
+    if user_api_key:
+        try:
+            groq_client = Groq(api_key=user_api_key)
+            st.success("Klucz API zaakceptowany!")
+        except Exception:
+            st.error("Nieprawidłowy klucz API.")
+
+    st.divider()
+    st.header("⚙️ Konfiguracja Planu")
     
     profil = st.selectbox("Profil Silnika:", [
         "FIZJO: Kompleksowy (Wszystkie partie)", 
@@ -368,11 +375,12 @@ with tab2:
                 st.toast(f"Dodano: {cw['nazwa']}")
 
 # ZAKŁADKA 3: CZAT AI GROQ
+# ZAKŁADKA 3: CZAT AI GROQ
 with tab3:
     st.subheader("Wirtualny Konsultant Treningowy (Llama 3)")
     
     if not groq_client:
-        st.error("Brak połączania z Groq. Wklej swój klucz API w kodzie (linia 32).")
+        st.info("👈 Aby rozpocząć czat ze sztuczną inteligencją, wklej swój darmowy klucz API w panelu bocznym. Klucz możesz wygenerować bezpłatnie na stronie console.groq.com.")
     else:
         for msg in st.session_state.historia_wiadomosci:
             if msg["role"] != "system":
