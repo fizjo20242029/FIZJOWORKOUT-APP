@@ -406,7 +406,7 @@ def generuj_excel(liczba_dni):
                     cell.alignment = center_align
     
     writer.close()
-    return bio.getvalue())
+    return bio.getvalue()
 
 # ==============================================================================
 # UI - INTERFEJS APLIKACJI MOBILNEJ / WEBOWEJ
