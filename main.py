@@ -240,23 +240,173 @@ def generuj_docx():
     doc.save(bio)
     return bio.getvalue()
 
-def generuj_excel():
-    dane_excel = [["L.p.", "Kategoria", "Nazwa ćwiczenia", "Czas", "Zalecenia", "Sposób wykonania", "Uwagi"]]
-    lp = 1
-    for kat, cw in st.session_state.wylosowany_plan_cache:
-        if kat == "NAGŁÓWEK DNIA":
-            dane_excel.append(["", "", "", "", "", "", ""])
-            dane_excel.append([cw['nazwa'], "", "", "", "", "", ""])
-            lp = 1
-        else:
-            dane_excel.append([lp, kat, cw['nazwa'], str(cw.get('czas_min','-')), cw['parametry'], cw['opis'], cw.get('uwagi', '')])
-            lp += 1
+def generuj_excel(liczba_dni):
+    if not st.session_state.wylosowany_plan_cache: 
+        return None
+    
+    dane_excel = []
+    is_gym = st.session_state.get('is_gym', False)
+    
+    # Wiersze informacyjne (metryczka)
+    dane_excel.append(["Imię i Nazwisko:", "", "", "", "", "", ""])
+    dane_excel.append(["Płeć:", "", "", "", "", "", ""])
+    
+    realny_czas = sum(x[1].get('czas_min', 0) for x in st.session_state.wylosowany_plan_cache if x[0] != "NAGŁÓWEK DNIA")
+    if is_gym:
+        dane_excel.append(["Podsumowanie planu:", "Trening Siłowy (Ilościowy)", "", "", "", "", ""])
+    else:
+        dane_excel.append(["Całkowity czas planu:", f"{realny_czas} min", "", "", "", "", ""])
+        
+    dane_excel.append(["", "", "", "", "", "", ""])
+    
+    czy_split = any(kat == "NAGŁÓWEK DNIA" for kat, cw in st.session_state.wylosowany_plan_cache)
+    
+    if czy_split:
+        czasy_dni = []
+        for k, c in st.session_state.wylosowany_plan_cache:
+            if k == "NAGŁÓWEK DNIA":
+                czasy_dni.append(0)
+            else:
+                if czasy_dni:
+                    czasy_dni[-1] += c.get('czas_min', 0)
+
+        lp = 1
+        dzien_aktualny = 0
+        for idx, (kat, cw) in enumerate(st.session_state.wylosowany_plan_cache):
+            if kat == "NAGŁÓWEK DNIA":
+                if dzien_aktualny > 0:
+                    dane_excel.append(["", "", "", "", "", "", ""])
+                dzien_aktualny += 1
+                nazwa_dnia_i_partii = cw['nazwa']
+                
+                if is_gym:
+                    dane_excel.append([f"{nazwa_dnia_i_partii}", "", "", "", "", "", ""])
+                else:
+                    czas_tego_dnia = czasy_dni[dzien_aktualny - 1] if dzien_aktualny <= len(czasy_dni) else 0
+                    dane_excel.append([f"{nazwa_dnia_i_partii} - Czas trwania: {czas_tego_dnia} min", "", "", "", "", "", ""])
+                    
+                dane_excel.append(["L.p.", "Nazwa ćwiczenia", "Czas", "Ilość serii", "Ilość powtórzeń", "Sposób wykonania", "Uwagi"])
+                lp = 1
+            else:
+                p_lower = str(cw['parametry']).lower()
+                if 'x' in p_lower:
+                    parts = p_lower.split('x')
+                    serie = parts[0].replace('serie','').replace('seria','').strip()
+                    powt = parts[1].replace('powtórzeń','').replace('powtórzenia','').strip()
+                else:
+                    serie = "1"
+                    powt = cw['parametry'].strip()
+
+                czas_str = "-" if is_gym else f"{cw.get('czas_min', 0)} min"
+                uwagi_str = cw.get('uwagi', '')
+                dane_excel.append([lp, cw['nazwa'], czas_str, serie, powt, cw['opis'], uwagi_str])
+                lp += 1
+        dane_excel.append(["", "", "", "", "", "", ""])
+        
+    else:
+        for dzien in range(1, liczba_dni + 1):
+            if is_gym:
+                dane_excel.append([f"DZIEŃ {dzien}", "", "", "", "", "", ""])
+            else:
+                dane_excel.append([f"DZIEŃ {dzien} - Czas trwania: {realny_czas} min", "", "", "", "", "", ""])
+                
+            dane_excel.append(["L.p.", "Nazwa ćwiczenia", "Czas", "Ilość serii", "Ilość powtórzeń", "Sposób wykonania", "Uwagi"])
             
+            for idx, (kat, cw) in enumerate(st.session_state.wylosowany_plan_cache, 1):
+                p_lower = str(cw['parametry']).lower()
+                if 'x' in p_lower:
+                    parts = p_lower.split('x')
+                    serie = parts[0].replace('serie','').replace('seria','').strip()
+                    powt = parts[1].replace('powtórzeń','').replace('powtórzenia','').strip()
+                else:
+                    serie = "1"
+                    powt = cw['parametry'].strip()
+
+                czas_str = "-" if is_gym else f"{cw.get('czas_min', 0)} min"
+                uwagi_str = cw.get('uwagi', '')
+                dane_excel.append([idx, cw['nazwa'], czas_str, serie, powt, cw['opis'], uwagi_str])
+            
+            dane_excel.append(["", "", "", "", "", "", ""])
+
     df = pd.DataFrame(dane_excel)
     bio = io.BytesIO()
-    with pd.ExcelWriter(bio, engine='openpyxl') as writer:
-        df.to_excel(writer, index=False, header=False, sheet_name='Harmonogram')
-    return bio.getvalue()
+    writer = pd.ExcelWriter(bio, engine='openpyxl')
+    df.to_excel(writer, index=False, header=False, sheet_name='Harmonogram')
+    
+    worksheet = writer.sheets['Harmonogram']
+    worksheet.column_dimensions['A'].width = 8   
+    worksheet.column_dimensions['B'].width = 30  
+    worksheet.column_dimensions['C'].width = 10  
+    worksheet.column_dimensions['D'].width = 12  
+    worksheet.column_dimensions['E'].width = 20  
+    worksheet.column_dimensions['F'].width = 50  
+    worksheet.column_dimensions['G'].width = 25  
+    
+    bold_font = Font(bold=True)
+    white_bold_font = Font(bold=True, color="FFFFFF")
+    wrap_text = Alignment(wrap_text=True, vertical='top')
+    center_align = Alignment(horizontal='center', vertical='center')
+    
+    thin_border = Border(
+        left=Side(style='thin'), right=Side(style='thin'),
+        top=Side(style='thin'), bottom=Side(style='thin')
+    )
+    
+    fill_day = PatternFill(start_color="1F497D", end_color="1F497D", fill_type="solid")       
+    fill_header = PatternFill(start_color="8DB4E2", end_color="8DB4E2", fill_type="solid")    
+    fill_data_even = PatternFill(start_color="DCE6F1", end_color="DCE6F1", fill_type="solid") 
+
+    data_row_counter = 0
+
+    for row_idx, row_data in enumerate(dane_excel, 1):
+        val_a = str(row_data[0])
+        
+        if row_idx in [1, 2, 3]:
+            worksheet.cell(row=row_idx, column=1).font = bold_font
+            if row_idx in [1, 2]:
+                worksheet.cell(row=row_idx, column=2).border = Border(bottom=Side(style='thin'))
+                worksheet.cell(row=row_idx, column=3).border = Border(bottom=Side(style='thin'))
+                worksheet.cell(row=row_idx, column=4).border = Border(bottom=Side(style='thin'))
+            
+        elif val_a.startswith("DZIEŃ") or val_a.startswith("Poniedziałek") or \
+             val_a.startswith("Wtorek") or val_a.startswith("Środa") or \
+             val_a.startswith("Czwartek") or val_a.startswith("Piątek") or \
+             val_a.startswith("Sobota") or val_a.startswith("Niedziela"):
+            worksheet.merge_cells(start_row=row_idx, start_column=1, end_row=row_idx, end_column=7)
+            cell = worksheet.cell(row=row_idx, column=1)
+            cell.font = white_bold_font
+            cell.fill = fill_day
+            cell.alignment = center_align
+            
+            for col_idx in range(1, 8):
+                worksheet.cell(row=row_idx, column=col_idx).border = thin_border
+            data_row_counter = 0
+            
+        elif val_a == "L.p.":
+            for col_idx in range(1, 8):
+                cell = worksheet.cell(row=row_idx, column=col_idx)
+                cell.font = bold_font
+                cell.fill = fill_header
+                cell.border = thin_border
+                cell.alignment = center_align
+                
+        elif val_a.isdigit():
+            data_row_counter += 1
+            current_fill = fill_data_even if data_row_counter % 2 == 0 else None
+            
+            for col_idx in range(1, 8):
+                cell = worksheet.cell(row=row_idx, column=col_idx)
+                cell.border = thin_border
+                if current_fill:
+                    cell.fill = current_fill
+                    
+                if col_idx in [6, 7]:
+                    cell.alignment = wrap_text
+                elif col_idx in [1, 3, 4, 5]:
+                    cell.alignment = center_align
+    
+    writer.close()
+    return bio.getvalue())
 
 # ==============================================================================
 # UI - INTERFEJS APLIKACJI MOBILNEJ / WEBOWEJ
