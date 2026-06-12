@@ -626,7 +626,7 @@ with st.sidebar:
     ])
     
     is_gym = profil.startswith("GYM:")
-    label_param = "Ilość ćw. NA PARTIĘ:" if is_gym else "Budżet czasu (min):"
+    label_param = "Ilość ćw. NA PARTIĘ:" if is_gym else "Ustaw czas (min):"
     domyslna_wartosc = 4 if is_gym else 45
     
     budzet = st.number_input(label_param, min_value=1, max_value=120, value=domyslna_wartosc)
