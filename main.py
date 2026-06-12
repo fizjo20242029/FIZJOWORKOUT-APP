@@ -586,6 +586,9 @@ def generuj_excel(liczba_dni):
 # ==============================================================================
 # UI - INTERFEJS APLIKACJI MOBILNEJ / WEBOWEJ
 # ==============================================================================
+# ==============================================================================
+# UI - INTERFEJS APLIKACJI MOBILNEJ / WEBOWEJ
+# ==============================================================================
 st.title("Fizjo Workout Ultimate")
 st.markdown("Zintegrowane środowisko projektowania programów treningowych.")
 
@@ -633,6 +636,11 @@ with st.sidebar:
         generuj_plan(profil, budzet, dni)
         st.rerun()
         
+    # --- NOWA FUNKCJA: RESET EKRANU ---
+    if st.button("❌ CZYŚĆ EKRAN (RESET)", use_container_width=True):
+        st.session_state.wylosowany_plan_cache = []
+        st.rerun()
+        
     st.divider()
     
     if st.session_state.wylosowany_plan_cache:
@@ -653,20 +661,25 @@ with st.sidebar:
         )
 
 # ZAKŁADKI GŁÓWNE
-tab1, tab2, tab3, tab4 = st.tabs(["📝 Twój Plan", "➕ Kreator", "✨ Asystent AI Groq", "⚙️ Baza Ćwiczeń"])
+tab1, tab2, tab3, tab4 = st.tabs(["📝 Twój Plan", "➕ Kreator", "✨ Asystent AI", "⚙️ Baza Ćwiczeń"])
 
 # ZAKŁADKA 1: WYGENEROWANY PLAN
 with tab1:
     if not st.session_state.wylosowany_plan_cache:
-        st.info("👈 Użyj panelu bocznego, aby wygenerować swój pierwszy plan.")
+        st.info("👈 Użyj panelu bocznego, aby wygenerować plan lub przejdź do Kreatora.")
     else:
         for idx, (kat, cw) in enumerate(st.session_state.wylosowany_plan_cache):
             if kat == "NAGŁÓWEK DNIA":
                 st.markdown(f"### 📅 {cw['nazwa']}")
+                
+                # Opcja usunięcia całego nagłówka dnia
+                if st.button("Usuń dzień", key=f"del_day_{idx}", type="primary"):
+                    st.session_state.wylosowany_plan_cache.pop(idx)
+                    st.rerun()
                 continue
                 
             with st.expander(f"{idx+1}. {cw['nazwa']} ({kat})", expanded=True):
-                col1, col2 = st.columns([3, 1])
+                col1, col2 = st.columns([3, 2])
                 with col1:
                     nowe_parametry = st.text_input("Zalecenie", cw['parametry'], key=f"p_{idx}")
                     nowe_uwagi = st.text_input("Uwagi dla pacjenta", cw.get('uwagi', ''), key=f"u_{idx}")
@@ -677,33 +690,70 @@ with tab1:
                     st.caption(f"**Anatomia:** {cw['miesnie']}")
                     st.write(cw['opis'])
                 with col2:
-                    if st.button("Usuń", key=f"del_{idx}", type="secondary"):
-                        st.session_state.wylosowany_plan_cache.pop(idx)
-                        st.rerun()
+                    st.write("Zarządzaj ćwiczeniem:")
+                    c_up, c_down, c_del = st.columns(3)
+                    
+                    # --- NOWA FUNKCJA: ZMIANA KOLEJNOŚCI (STRZAŁKI) ---
+                    with c_up:
+                        if idx > 0 and st.button("⬆️", key=f"up_{idx}", use_container_width=True):
+                            st.session_state.wylosowany_plan_cache[idx], st.session_state.wylosowany_plan_cache[idx-1] = st.session_state.wylosowany_plan_cache[idx-1], st.session_state.wylosowany_plan_cache[idx]
+                            st.rerun()
+                    with c_down:
+                        if idx < len(st.session_state.wylosowany_plan_cache) - 1 and st.button("⬇️", key=f"down_{idx}", use_container_width=True):
+                            st.session_state.wylosowany_plan_cache[idx], st.session_state.wylosowany_plan_cache[idx+1] = st.session_state.wylosowany_plan_cache[idx+1], st.session_state.wylosowany_plan_cache[idx]
+                            st.rerun()
+                    with c_del:
+                        if st.button("❌", key=f"del_{idx}", type="primary", use_container_width=True):
+                            st.session_state.wylosowany_plan_cache.pop(idx)
+                            st.rerun()
 
 # ZAKŁADKA 2: KREATOR MANUALNY
 with tab2:
-    st.subheader("Baza wszystkich ćwiczeń")
-    wybrana_kategoria = st.selectbox("Wybierz kategorię do przeglądu:", list(GLOBALNA_BAZA.keys()))
-    
-    for cw in GLOBALNA_BAZA[wybrana_kategoria]:
-        col1, col2 = st.columns([4, 1])
-        with col1:
-            st.write(f"**{cw['nazwa']}** [{cw['miesnie']}]")
-        with col2:
-            if st.button("Dodaj do planu", key=f"add_{cw['nazwa']}"):
-                cw_kopia = cw.copy()
-                cw_kopia["uwagi"] = ""
-                etykieta = f"GYM: {wybrana_kategoria}" if wybrana_kategoria in BAZA_SILOWNIA else wybrana_kategoria
-                st.session_state.wylosowany_plan_cache.append((etykieta, cw_kopia))
-                st.toast(f"Dodano: {cw['nazwa']}")
+    # --- NOWA FUNKCJA: WYSZUKIWARKA MIĘŚNI/ĆWICZEŃ ---
+    wyszukiwarka = st.text_input("🔍 Wyszukaj ćwiczenie lub mięsień (np. 'przepona', 'pośladkowy'):").strip().lower()
+    st.divider()
+
+    if wyszukiwarka:
+        st.markdown("**Wyniki wyszukiwania:**")
+        znaleziono = False
+        for kat, lista_cw in GLOBALNA_BAZA.items():
+            for cw in lista_cw:
+                if wyszukiwarka in cw['nazwa'].lower() or wyszukiwarka in cw['miesnie'].lower():
+                    znaleziono = True
+                    col1, col2 = st.columns([4, 1])
+                    with col1:
+                        st.write(f"**{cw['nazwa']}** ({kat}) \n↳ [{cw['miesnie']}]")
+                    with col2:
+                        if st.button("Dodaj", key=f"add_search_{kat}_{cw['nazwa']}"):
+                            etykieta = f"GYM: {kat}" if kat in BAZA_SILOWNIA else kat
+                            cw_kopia = cw.copy()
+                            cw_kopia["uwagi"] = ""
+                            st.session_state.wylosowany_plan_cache.append((etykieta, cw_kopia))
+                            st.toast(f"Dodano: {cw['nazwa']}")
+        if not znaleziono:
+            st.info("Nie znaleziono ćwiczeń pasujących do tego mięśnia/nazwy.")
+    else:
+        # Standardowy widok wyboru kategorii, gdy wyszukiwarka jest pusta
+        wybrana_kategoria = st.selectbox("Lub wybierz kategorię z listy:", list(GLOBALNA_BAZA.keys()))
+        
+        for cw in GLOBALNA_BAZA[wybrana_kategoria]:
+            col1, col2 = st.columns([4, 1])
+            with col1:
+                st.write(f"**{cw['nazwa']}** \n↳ [{cw['miesnie']}]")
+            with col2:
+                if st.button("Dodaj", key=f"add_{cw['nazwa']}"):
+                    cw_kopia = cw.copy()
+                    cw_kopia["uwagi"] = ""
+                    etykieta = f"GYM: {wybrana_kategoria}" if wybrana_kategoria in BAZA_SILOWNIA else wybrana_kategoria
+                    st.session_state.wylosowany_plan_cache.append((etykieta, cw_kopia))
+                    st.toast(f"Dodano: {cw['nazwa']}")
 
 # ZAKŁADKA 3: CZAT AI GROQ
 with tab3:
     st.subheader("Wirtualny Konsultant Treningowy (Llama 3)")
     
     if not groq_client:
-        st.info("👈 Aby rozpocząć czat ze sztuczną inteligencją, wklej swój darmowy klucz API w panelu bocznym. Klucz możesz wygenerować bezpłatnie na stronie console.groq.com.")
+        st.info("👈 Aby rozpocząć czat ze sztuczną inteligencją, wklej swój darmowy klucz API w panelu bocznym.")
     else:
         for msg in st.session_state.historia_wiadomosci:
             if msg["role"] != "system":
@@ -731,12 +781,12 @@ with tab3:
                     st.session_state.historia_wiadomosci.append({"role": "assistant", "content": odpowiedz})
                 except Exception as e:
                     st.error(f"Błąd połączenia: {e}")
+
 # ZAKŁADKA 4: MENEDŻER WŁASNYCH ĆWICZEŃ
 with tab4:
     st.subheader("Zarządzaj własną bazą")
-    st.info("💡 Ćwiczenia zapisują się w pliku `wlasne_cwiczenia.json`. Pamiętaj, że w przypadku publikacji apki w darmowej chmurze (Streamlit Cloud), pliki lokalne mogą się z czasem resetować. Na Twoim komputerze są jednak w pełni bezpieczne.")
+    st.info("💡 Ćwiczenia zapisują się w pliku `wlasne_cwiczenia.json` na Twoim dysku.")
 
-    # FORMULARZ DODAWANIA
     with st.expander("➕ Dodaj nowe ćwiczenie", expanded=False):
         with st.form("form_dodaj_cwiczenie", clear_on_submit=True):
             kategorie = [f"FIZJO: {k}" for k in BAZA_FIZJO.keys()] + [f"GYM: {k}" for k in BAZA_SILOWNIA.keys()]
@@ -788,7 +838,6 @@ with tab4:
 
     st.divider()
     
-    # LISTA I USUWANIE
     st.subheader("🗑️ Usuń własne ćwiczenia")
     if os.path.exists(PLIK_WLASNYCH_CWICZEN):
         try:
