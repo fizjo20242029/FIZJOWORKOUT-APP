@@ -708,8 +708,9 @@ with tab1:
                             st.rerun()
 
 # ZAKŁADKA 2: KREATOR MANUALNY
+# ZAKŁADKA 2: KREATOR MANUALNY
 with tab2:
-    # --- NOWA FUNKCJA: WYSZUKIWARKA MIĘŚNI/ĆWICZEŃ ---
+    # --- WYSZUKIWARKA MIĘŚNI/ĆWICZEŃ ---
     wyszukiwarka = st.text_input("🔍 Wyszukaj ćwiczenie lub mięsień (np. 'przepona', 'pośladkowy'):").strip().lower()
     st.divider()
 
@@ -720,12 +721,16 @@ with tab2:
             for cw in lista_cw:
                 if wyszukiwarka in cw['nazwa'].lower() or wyszukiwarka in cw['miesnie'].lower():
                     znaleziono = True
+                    # Rozpoznawanie pochodzenia ćwiczenia
+                    typ_bazy = "GYM" if kat in BAZA_SILOWNIA else "FIZJO"
+                    
                     col1, col2 = st.columns([4, 1])
                     with col1:
-                        st.write(f"**{cw['nazwa']}** ({kat}) \n↳ [{cw['miesnie']}]")
+                        st.write(f"**{cw['nazwa']}** ({typ_bazy}: {kat}) \n↳ [{cw['miesnie']}]")
                     with col2:
-                        if st.button("Dodaj", key=f"add_search_{kat}_{cw['nazwa']}"):
-                            etykieta = f"GYM: {kat}" if kat in BAZA_SILOWNIA else kat
+                        # Unikalny klucz przycisku dla wyszukiwarki
+                        if st.button("Dodaj", key=f"add_search_{typ_bazy}_{kat}_{cw['nazwa']}"):
+                            etykieta = f"GYM: {kat}" if typ_bazy == "GYM" else kat
                             cw_kopia = cw.copy()
                             cw_kopia["uwagi"] = ""
                             st.session_state.wylosowany_plan_cache.append((etykieta, cw_kopia))
@@ -733,18 +738,23 @@ with tab2:
         if not znaleziono:
             st.info("Nie znaleziono ćwiczeń pasujących do tego mięśnia/nazwy.")
     else:
-        # Standardowy widok wyboru kategorii, gdy wyszukiwarka jest pusta
-        wybrana_kategoria = st.selectbox("Lub wybierz kategorię z listy:", list(GLOBALNA_BAZA.keys()))
+        # Standardowy widok wyboru kategorii z wyraźnymi przedrostkami
+        lista_kategorii_ui = [f"FIZJO: {k}" for k in BAZA_FIZJO.keys()] + [f"GYM: {k}" for k in BAZA_SILOWNIA.keys()]
+        wybrana_kategoria_ui = st.selectbox("Lub wybierz kategorię z listy:", lista_kategorii_ui)
         
-        for cw in GLOBALNA_BAZA[wybrana_kategoria]:
+        # Rozbicie przedrostka i czystej nazwy kategorii
+        typ_wybranej, czysta_kat = wybrana_kategoria_ui.split(": ")
+        
+        for cw in GLOBALNA_BAZA[czysta_kat]:
             col1, col2 = st.columns([4, 1])
             with col1:
                 st.write(f"**{cw['nazwa']}** \n↳ [{cw['miesnie']}]")
             with col2:
-                if st.button("Dodaj", key=f"add_{cw['nazwa']}"):
+                if st.button("Dodaj", key=f"add_{typ_wybranej}_{czysta_kat}_{cw['nazwa']}"):
                     cw_kopia = cw.copy()
                     cw_kopia["uwagi"] = ""
-                    etykieta = f"GYM: {wybrana_kategoria}" if wybrana_kategoria in BAZA_SILOWNIA else wybrana_kategoria
+                    # Zachowanie spójności etykiet z resztą aplikacji (automatem i eksportem docx/excel)
+                    etykieta = f"GYM: {czysta_kat}" if typ_wybranej == "GYM" else czysta_kat
                     st.session_state.wylosowany_plan_cache.append((etykieta, cw_kopia))
                     st.toast(f"Dodano: {cw['nazwa']}")
 
