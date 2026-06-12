@@ -653,7 +653,7 @@ with st.sidebar:
         )
 
 # ZAKŁADKI GŁÓWNE
-tab1, tab2, tab3 = st.tabs(["📝 Twój Plan", "➕ Kreator", "✨ Asystent AI Groq"])
+tab1, tab2, tab3, tab4 = st.tabs(["📝 Twój Plan", "➕ Kreator", "✨ Asystent AI Groq", "⚙️ Baza Ćwiczeń"])
 
 # ZAKŁADKA 1: WYGENEROWANY PLAN
 with tab1:
@@ -731,3 +731,88 @@ with tab3:
                     st.session_state.historia_wiadomosci.append({"role": "assistant", "content": odpowiedz})
                 except Exception as e:
                     st.error(f"Błąd połączenia: {e}")
+# ZAKŁADKA 4: MENEDŻER WŁASNYCH ĆWICZEŃ
+with tab4:
+    st.subheader("Zarządzaj własną bazą")
+    st.info("💡 Ćwiczenia zapisują się w pliku `wlasne_cwiczenia.json`. Pamiętaj, że w przypadku publikacji apki w darmowej chmurze (Streamlit Cloud), pliki lokalne mogą się z czasem resetować. Na Twoim komputerze są jednak w pełni bezpieczne.")
+
+    # FORMULARZ DODAWANIA
+    with st.expander("➕ Dodaj nowe ćwiczenie", expanded=False):
+        with st.form("form_dodaj_cwiczenie", clear_on_submit=True):
+            kategorie = [f"FIZJO: {k}" for k in BAZA_FIZJO.keys()] + [f"GYM: {k}" for k in BAZA_SILOWNIA.keys()]
+            kat_wyb = st.selectbox("Kategoria Docelowa:", kategorie)
+            
+            n_nazwa = st.text_input("Nazwa ćwiczenia:")
+            n_parametry = st.text_input("Zalecenie (np. 3x12, 5 minut):")
+            
+            col1, col2 = st.columns(2)
+            with col1:
+                n_czas = st.number_input("Szacowany czas (min):", min_value=1, max_value=60, value=2)
+            with col2:
+                n_miesnie = st.text_input("Anatomia (pracujące mięśnie):")
+                
+            n_opis = st.text_area("Opis / Instrukcja ruchu:")
+
+            if st.form_submit_button("Zapisz do bazy", type="primary", use_container_width=True):
+                if n_nazwa and n_parametry and n_miesnie and n_opis:
+                    nowe_cw = {
+                        "nazwa": n_nazwa,
+                        "opis": n_opis,
+                        "czas_min": int(n_czas),
+                        "parametry": n_parametry,
+                        "miesnie": n_miesnie
+                    }
+                    
+                    typ_bazy_str, kategoria_str = kat_wyb.split(": ")
+                    dane_z_pliku = {"FIZJO": {}, "GYM": {}}
+                    
+                    if os.path.exists(PLIK_WLASNYCH_CWICZEN):
+                        try:
+                            with open(PLIK_WLASNYCH_CWICZEN, "r", encoding="utf-8") as f:
+                                dane_z_pliku = json.load(f)
+                        except: pass
+                    
+                    if typ_bazy_str not in dane_z_pliku: dane_z_pliku[typ_bazy_str] = {}
+                    if kategoria_str not in dane_z_pliku[typ_bazy_str]: dane_z_pliku[typ_bazy_str][kategoria_str] = []
+                    
+                    dane_z_pliku[typ_bazy_str][kategoria_str].append(nowe_cw)
+                    
+                    try:
+                        with open(PLIK_WLASNYCH_CWICZEN, "w", encoding="utf-8") as f:
+                            json.dump(dane_z_pliku, f, ensure_ascii=False, indent=4)
+                        st.success(f"Dodano '{n_nazwa}' do bazy! Odśwież stronę, aby zobaczyć je w kreatorze.")
+                    except Exception as e:
+                        st.error(f"Błąd zapisu: {e}")
+                else:
+                    st.warning("Wypełnij wszystkie pola formularza.")
+
+    st.divider()
+    
+    # LISTA I USUWANIE
+    st.subheader("🗑️ Usuń własne ćwiczenia")
+    if os.path.exists(PLIK_WLASNYCH_CWICZEN):
+        try:
+            with open(PLIK_WLASNYCH_CWICZEN, "r", encoding="utf-8") as f:
+                dane_z_pliku = json.load(f)
+            
+            pusto = True
+            for tb in ["FIZJO", "GYM"]:
+                if tb in dane_z_pliku:
+                    for k, lista in dane_z_pliku[tb].items():
+                        if lista:
+                            pusto = False
+                            st.markdown(f"**■ {tb} - {k.upper()}**")
+                            for idx_del, cw_del in enumerate(lista):
+                                col1, col2 = st.columns([4, 1])
+                                col1.write(f"↳ {cw_del['nazwa']} ({cw_del['czas_min']} min)")
+                                if col2.button("Usuń", key=f"usun_{tb}_{k}_{idx_del}", type="primary"):
+                                    del dane_z_pliku[tb][k][idx_del]
+                                    with open(PLIK_WLASNYCH_CWICZEN, "w", encoding="utf-8") as f2:
+                                        json.dump(dane_z_pliku, f2, ensure_ascii=False, indent=4)
+                                    st.rerun()
+            if pusto:
+                st.caption("Brak dodanych własnych ćwiczeń.")
+        except Exception as e:
+            st.error(f"Błąd odczytu pliku z własnymi ćwiczeniami: {e}")
+    else:
+        st.caption("Brak dodanych własnych ćwiczeń.")
