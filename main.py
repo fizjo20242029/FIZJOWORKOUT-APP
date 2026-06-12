@@ -472,7 +472,7 @@ with st.sidebar:
         )
         st.download_button(
             label="📊 POBIERZ EXCEL",
-            data=generuj_excel(),
+            data=generuj_excel(dni),,
             file_name="Plan_Treningowy.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             use_container_width=True
