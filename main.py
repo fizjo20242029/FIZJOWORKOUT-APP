@@ -760,7 +760,7 @@ with tab2:
 
 # ZAKŁADKA 3: CZAT AI GROQ
 with tab3:
-    st.subheader("Wirtualny Konsultant Treningowy (Llama 3)")
+    st.subheader("Wirtualny Konsultant Treningowy")
     
     if not groq_client:
         st.info("👈 Aby rozpocząć czat ze sztuczną inteligencją, wklej swój darmowy klucz API w panelu bocznym.")
