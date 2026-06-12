@@ -13,7 +13,7 @@ from groq import Groq
 # ==============================================================================
 # KONFIGURACJA STRONY STREAMLIT
 # ==============================================================================
-st.set_page_config(page_title="Fizjo Workout Ultimate", page_icon="💪", layout="centered")
+st.set_page_config(page_title="Fizjo Workout Ultimate K.T.", page_icon="💪", layout="centered")
 
 # ==============================================================================
 # INICJALIZACJA STANU SESJI (PAMIĘĆ APLIKACJI WEBOWEJ)
