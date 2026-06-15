@@ -646,8 +646,44 @@ def generuj_protokol(nazwa_choroby):
 # ==============================================================================
 # UI - INTERFEJS STRONY WEBOWEJ
 # ==============================================================================
+# ==============================================================================
+# UI - INTERFEJS STRONY WEBOWEJ
+# ==============================================================================
+st.markdown('<div id="poczatek-strony"></div>', unsafe_allow_html=True)
 st.title("Fizjo Workout Ultimate")
 st.markdown("Zintegrowane środowisko projektowania programów treningowych.")
+
+# Kod stylizujący pływający przycisk "Wróć na górę"
+st.markdown("""
+<style>
+.back-to-top {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background-color: #28a745;
+    color: white;
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    text-decoration: none;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+    z-index: 9999;
+    transition: 0.3s;
+}
+.back-to-top:hover {
+    background-color: #218838;
+    color: white !important;
+}
+</style>
+<a href="#poczatek-strony" class="back-to-top" title="Wróć na górę">⬆️</a>
+""", unsafe_allow_html=True)
+
+with st.sidebar:
+# ... (reszta kodu bez zmian)
 
 with st.sidebar:
     st.header("🔑 Dostęp do AI")
@@ -774,6 +810,7 @@ with tab1:
                     abs_idx += 1
                     continue
                     
+                # B. Pojedyncze ćwiczenie
                 with st.expander(f"{licznik}. {cw['nazwa']} ({kat})", expanded=True):
                     col1, col2 = st.columns([3, 2])
                     with col1:
@@ -784,15 +821,32 @@ with tab1:
                         st.caption(f"**Anatomia:** {cw['miesnie']}")
                         st.write(cw['opis'])
                     with col2:
-                        c_up, c_down, c_del = st.columns(3)
+                        # Zmiana układu na 4 przyciski
+                        c_up, c_down, c_swap, c_del = st.columns(4)
                         moze_w_gore = abs_idx > 0 and st.session_state.wylosowany_plan_cache[abs_idx-1][0] != "NAGŁÓWEK DNIA"
                         moze_w_dol = abs_idx < len(st.session_state.wylosowany_plan_cache) - 1 and st.session_state.wylosowany_plan_cache[abs_idx+1][0] != "NAGŁÓWEK DNIA"
+                        
                         if moze_w_gore and c_up.button("⬆️", key=f"up_{abs_idx}"):
                             st.session_state.wylosowany_plan_cache[abs_idx], st.session_state.wylosowany_plan_cache[abs_idx-1] = st.session_state.wylosowany_plan_cache[abs_idx-1], st.session_state.wylosowany_plan_cache[abs_idx]
                             st.rerun()
+                            
                         if moze_w_dol and c_down.button("⬇️", key=f"down_{abs_idx}"):
                             st.session_state.wylosowany_plan_cache[abs_idx], st.session_state.wylosowany_plan_cache[abs_idx+1] = st.session_state.wylosowany_plan_cache[abs_idx+1], st.session_state.wylosowany_plan_cache[abs_idx]
                             st.rerun()
+                            
+                        # NOWY PRZYCISK: WYMIEŃ NA INNE LOSOWE (Z TEJ SAMEJ KATEGORII)
+                        if c_swap.button("🔄", key=f"swap_{abs_idx}", help="Wylosuj i wstaw inne ćwiczenie z tej samej partii"):
+                            czysta_kat = kat.replace("GYM: ", "").replace(" (Rozgrzewka)", "").replace(" (Wyciszenie)", "")
+                            if kat == "GYM: Zakończenie":
+                                czysta_kat = "Zakończenie treningu"
+                                
+                            baza_docelowa = GLOBALNA_BAZA.get(czysta_kat, [])
+                            if baza_docelowa:
+                                nowe_cw = random.choice(baza_docelowa).copy()
+                                nowe_cw["uwagi"] = ""
+                                st.session_state.wylosowany_plan_cache[abs_idx] = (kat, nowe_cw)
+                                st.rerun()
+                                
                         if c_del.button("❌", key=f"del_{abs_idx}", type="primary"):
                             st.session_state.wylosowany_plan_cache.pop(abs_idx)
                             st.rerun()
