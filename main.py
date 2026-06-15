@@ -785,15 +785,27 @@ with tab2:
                     st.session_state.wylosowany_plan_cache.append((f"GYM: {kat_wyb_g}", cw.copy()))
                     st.toast("Dodano!")
 # NOWA ZAKŁADKA: PROTOKOŁY KLINICZNE (PANEL GŁÓWNY)
+# NOWA ZAKŁADKA: PROTOKOŁY KLINICZNE (PANEL GŁÓWNY)
 with tab_protokoly:
     st.subheader("🏥 Gotowe Protokoły Kliniczne")
-    st.markdown("Wybierz jednostkę chorobową z listy, aby automatycznie załadować zaprogramowany zestaw ćwiczeń rehabilitacyjnych bezpośrednio do zakładki **Twój Plan**.")
+    st.markdown("Wyszukaj lub kliknij wybraną jednostkę chorobową, aby natychmiast załadować dedykowany zestaw ćwiczeń do zakładki **Twój Plan**.")
     
     if PROTOKOLY_KLINICZNE:
-        wybrana_choroba = st.selectbox("Wybierz schorzenie z bazy:", list(PROTOKOLY_KLINICZNE.keys()), key="main_panel_proto")
-        if st.button("⚕️ URUCHOM PROTOKÓŁ REHABILITACYJNY", use_container_width=True, type="primary"):
-            generuj_protokol(wybrana_choroba)
-            st.rerun()
+        # Wyszukiwarka chorób
+        szukana_choroba = st.text_input("🔍 Wyszukaj jednostkę chorobową (np. 'rwa', 'zespół'):", key="szukaj_proto").strip().lower()
+        st.divider()
+        
+        # Filtrowanie i generowanie przycisków
+        znaleziono_protokol = False
+        for choroba in PROTOKOLY_KLINICZNE.keys():
+            if szukana_choroba in choroba.lower():
+                znaleziono_protokol = True
+                if st.button(f"⚕️ {choroba}", key=f"proto_btn_{choroba}", use_container_width=True):
+                    generuj_protokol(choroba)
+                    st.rerun()
+                    
+        if not znaleziono_protokol:
+            st.info("Nie znaleziono protokołu dla wpisanej frazy.")
     else:
         st.error("Brak pliku `protokoly.json` w katalogu aplikacji. Utwórz plik, aby aktywować bazę kliniczną.")
 # ZAKŁADKA 3: CZAT AI GROQ
