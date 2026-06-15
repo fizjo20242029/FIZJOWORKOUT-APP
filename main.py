@@ -637,14 +637,22 @@ def generuj_excel_gym(liczba_dni):
                 serie, powt = "1", parametry_str.strip()
                 
             ws_plan.cell(row=row_idx, column=1, value=ex_nr).alignment = Alignment(horizontal="center")
-            ws_plan.cell(row=row_idx, column=2, value=cw['nazwa'])
+            
+            # Włączenie zawijania tekstu dla nazw ćwiczeń w Planie
+            cell_b = ws_plan.cell(row=row_idx, column=2, value=cw['nazwa'])
+            cell_b.alignment = Alignment(wrap_text=True, vertical='center', horizontal='left')
+            
             ws_plan.cell(row=row_idx, column=3, value=serie).alignment = Alignment(horizontal="center")
             ws_plan.cell(row=row_idx, column=4, value=powt).alignment = Alignment(horizontal="center")
             for col_idx in range(1, 9): ws_plan.cell(row=row_idx, column=col_idx).border = thin_border
             row_idx += 1; ex_nr += 1
             
-    for c_letter, c_width in [('A', 5), ('B', 30), ('C', 10), ('D', 15), ('E', 10), ('F', 10), ('G', 12), ('H', 15)]:
+    for c_letter, c_width in [('A', 5), ('C', 10), ('D', 15), ('E', 10), ('F', 10), ('G', 12), ('H', 15)]:
         ws_plan.column_dimensions[c_letter].width = c_width
+        
+    # Automatyczne dopasowanie szerokości kolumny B w Planie Treningowym
+    max_len_plan_b = max((len(str(ws_plan.cell(row=r, column=2).value or '')) for r in range(1, row_idx)), default=30)
+    ws_plan.column_dimensions['B'].width = max(30, max_len_plan_b + 3)
 
     # --- ZAKŁADKA 2: DZIENNIK TRENINGOWY (Cały Rok - 52 tyg) ---
     ws_dz = wb.create_sheet("DZIENNIK TRENINGOWY")
@@ -668,7 +676,7 @@ def generuj_excel_gym(liczba_dni):
                 c3.font = Font(bold=True)
                 ws_dz.column_dimensions[get_column_letter(s_col+idx_h)].width = 9
 
-    ws_dz.column_dimensions['A'].width = 12; ws_dz.column_dimensions['B'].width = 30
+    ws_dz.column_dimensions['A'].width = 12
     ws_dz.cell(row=3, column=1, value="KOLEJNOŚĆ").font = Font(bold=True)
     ws_dz.cell(row=3, column=2, value="ĆWICZENIE").font = Font(bold=True)
     
@@ -687,7 +695,7 @@ def generuj_excel_gym(liczba_dni):
             ws_dz.cell(row=r_dz, column=2, value=cw['nazwa'])
             analiza_data.append((cw['nazwa'], r_dz)); r_dz += 1; ex_nr += 1
 
-    # --- NOWA SIATKA: Rysowanie krawędzi dla każdego elementu i grube linie cięcia (do 100 wierszy) ---
+    # Rysowanie krawędzi, ustawianie grubych linii oraz automatycznego zawijania tekstu dla kolumny B
     max_col_dz = 2 + 52 * 18
     ostatni_wiersz_siatki = max(100, r_dz + 15)
     
@@ -700,20 +708,25 @@ def generuj_excel_gym(liczba_dni):
             b_top = thin_side
             b_bottom = thin_side
             
-            # Odseparowanie kolumn opisowych (A i B) od sekcji wpisywania wyników
             if col == 2: b_right = medium_side
             if col == 3: b_left = medium_side
             
-            # Tworzenie wyraźnych, grubych pionowych granic między tygodniami
             if col > 2:
                 if (col - 2) % 18 == 1: b_left = medium_side
                 if (col - 2) % 18 == 0: b_right = medium_side
                 
-            # Gruba linia pozioma zamykająca sekcję nagłówkową dziennika
             if row == 3:
                 b_bottom = medium_side
                 
             cell.border = Border(left=b_left, right=b_right, top=b_top, bottom=b_bottom)
+            
+            # NOWOŚĆ: Automatyczne włączenie zawijania tekstu dla komórek z nazwami ćwiczeń
+            if col == 2 and row >= 4:
+                cell.alignment = Alignment(wrap_text=True, vertical='center', horizontal='left')
+
+    # NOWOŚĆ: Automatyczne dopasowanie szerokości kolumny B na podstawie najdłuższego ćwiczenia
+    max_len_dz_b = max((len(str(ws_dz.cell(row=r, column=2).value or '')) for r in range(4, r_dz)), default=30)
+    ws_dz.column_dimensions['B'].width = max(30, max_len_dz_b + 3)
 
     # --- ZAKŁADKA 3: ANALIZA PROGRESU (Formuły makrocyklowe) ---
     ws_an = wb.create_sheet("ANALIZA")
