@@ -607,7 +607,9 @@ def generuj_excel_fizjo(liczba_dni):
 def generuj_excel_gym(liczba_dni):
     if not st.session_state.wylosowany_plan_cache: return None
     wb = openpyxl.Workbook()
-    thin_border = Border(left=Side(style='thin'), right=Side(style='thin'), top=Side(style='thin'), bottom=Side(style='thin'))
+    thin_side = Side(style='thin')
+    medium_side = Side(style='medium')
+    thin_border = Border(left=thin_side, right=thin_side, top=thin_side, bottom=thin_side)
     
     # --- ZAKŁADKA 1: PLAN TRENINGOWY ---
     ws_plan = wb.active
@@ -643,15 +645,15 @@ def generuj_excel_gym(liczba_dni):
         start_col = 3 + w*18
         ws_dz.merge_cells(start_row=1, start_column=start_col, end_row=1, end_column=start_col+17)
         c = ws_dz.cell(row=1, column=start_col, value=f"Tydzień {w+1}")
-        c.alignment = Alignment(horizontal="center"); c.fill = PatternFill(start_color="CCE5FF", end_color="CCE5FF", fill_type="solid"); c.font = Font(bold=True); c.border = thin_border
+        c.alignment = Alignment(horizontal="center"); c.fill = PatternFill(start_color="CCE5FF", end_color="CCE5FF", fill_type="solid"); c.font = Font(bold=True)
         for s in range(6):
             s_col = start_col + s*3
             ws_dz.merge_cells(start_row=2, start_column=s_col, end_row=2, end_column=s_col+2)
             c2 = ws_dz.cell(row=2, column=s_col, value=f"SERIA {s+1}")
-            c2.alignment = Alignment(horizontal="center"); c2.fill = PatternFill(start_color="E6F2FF", end_color="E6F2FF", fill_type="solid"); c2.border = thin_border
+            c2.alignment = Alignment(horizontal="center"); c2.fill = PatternFill(start_color="E6F2FF", end_color="E6F2FF", fill_type="solid")
             for idx_h, val_h in enumerate(["CIĘŻAR", "POWT.", "RIR"]):
                 c3 = ws_dz.cell(row=3, column=s_col+idx_h, value=val_h)
-                c3.alignment = Alignment(horizontal="center"); c3.border = thin_border; ws_dz.column_dimensions[get_column_letter(s_col+idx_h)].width = 9
+                c3.alignment = Alignment(horizontal="center"); ws_dz.column_dimensions[get_column_letter(s_col+idx_h)].width = 9
 
     ws_dz.column_dimensions['A'].width = 12; ws_dz.column_dimensions['B'].width = 30
     ws_dz.cell(row=3, column=1, value="KOLEJNOŚĆ").font = Font(bold=True); ws_dz.cell(row=3, column=2, value="ĆWICZENIE").font = Font(bold=True)
@@ -666,9 +668,27 @@ def generuj_excel_gym(liczba_dni):
             r_dz += 1; ex_nr = 1; dzien_idx += 1
         else:
             ws_dz.cell(row=r_dz, column=1, value=ex_nr).alignment = Alignment(horizontal="center"); ws_dz.cell(row=r_dz, column=2, value=cw['nazwa'])
-            ws_dz.cell(row=r_dz, column=1).border = thin_border; ws_dz.cell(row=r_dz, column=2).border = thin_border
-            for i in range(18): ws_dz.cell(row=r_dz, column=3+i).border = thin_border
             analiza_data.append((cw['nazwa'], r_dz)); r_dz += 1; ex_nr += 1
+
+    # NOWOŚĆ: Kompleksowe obramowanie Dziennika Treningowego z grubymi liniami cięcia
+    max_col_dz = 2 + 52 * 18
+    for row in range(1, r_dz):
+        for col in range(1, max_col_dz + 1):
+            cell = ws_dz.cell(row=row, column=col)
+            
+            b_left = thin_side
+            b_right = thin_side
+            
+            # Oddzielenie nazw ćwiczeń od siatki tygodni (pomiędzy kolumną B i C)
+            if col == 2: b_right = medium_side
+            if col == 3: b_left = medium_side
+            
+            # Oddzielenie poszczególnych tygodni grubą linią
+            if col > 2:
+                if (col - 2) % 18 == 1: b_left = medium_side  # Lewa krawędź pierwszego pola tygodnia
+                if (col - 2) % 18 == 0: b_right = medium_side # Prawa krawędź ostatniego pola tygodnia
+
+            cell.border = Border(left=b_left, right=b_right, top=thin_side, bottom=thin_side)
 
     # --- ZAKŁADKA 3: ANALIZA PROGRESU (Formuły makrocyklowe) ---
     ws_an = wb.create_sheet("ANALIZA")
@@ -682,7 +702,7 @@ def generuj_excel_gym(liczba_dni):
 
     ws_an.column_dimensions['A'].width = 30; ws_an.merge_cells("A1:A2")
     c = ws_an.cell(row=1, column=1, value="ĆWICZENIE")
-    c.alignment = Alignment(horizontal="center", vertical="center"); c.fill = fill_h; c.font = font_w
+    c.alignment = Alignment(horizontal="center", vertical="center"); c.fill = fill_h; c.font = font_w; c.border = thin_border
     
     for w in range(52): set_block(2 + w*3, f"Tydzień {w+1}", ["Max Ciężar", "Suma Powt.", "Zrealiz. Serie"], "E6F2FF")
     
