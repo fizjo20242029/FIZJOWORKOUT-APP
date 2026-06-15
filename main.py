@@ -547,7 +547,7 @@ def generuj_excel_fizjo(liczba_dni):
     thin_border = Border(left=Side(style='thin', color='000000'), right=Side(style='thin', color='000000'), 
                          top=Side(style='thin', color='000000'), bottom=Side(style='thin', color='000000'))
     
-    # Pancerny format ARGB (wymuszany przez MS Excel)
+    # Pancerny format ARGB (wymuszany przez MS Excel i Google Sheets)
     fill_day = PatternFill(start_color="FF28A745", end_color="FF28A745", fill_type="solid")
     fill_header = PatternFill(start_color="FFD4EDDA", end_color="FFD4EDDA", fill_type="solid")
     font_white = Font(color="FFFFFFFF", bold=True, size=11)
@@ -566,26 +566,54 @@ def generuj_excel_fizjo(liczba_dni):
     ws.cell(row=5, column=1, value="Całkowity szacowany czas terapii/treningu:").font = Font(bold=True)
     ws.cell(row=5, column=2, value=f"{realny_czas} min")
     
+    # --- NOWOŚĆ: Dynamiczne wykrywanie struktury planu ---
+    ma_naglowki_dni = any(kat == "NAGŁÓWEK DNIA" for kat, _ in st.session_state.wylosowany_plan_cache)
+    
     row_idx = 7
     dzien_aktualny = 0
     lp = 1
+    ostatnia_kategoria = None
+    pierwszy_wiersz_bez_naglowka = not ma_naglowki_dni
     
     for kat, cw in st.session_state.wylosowany_plan_cache:
+        is_new_section = False
+        sekcja_tytul = ""
+        
+        # Warunek 1: Klasyczny plan posiadający sztywne nagłówki dni
         if kat == "NAGŁÓWEK DNIA":
-            if row_idx > 7: row_idx += 1
+            is_new_section = True
             dzien_aktualny += 1
+            sekcja_tytul = cw.get('nazwa', f'Dzień {dzien_aktualny}') if isinstance(cw, dict) else str(cw)
+        
+        # Warunek 2: Plan ukierunkowany - generowanie pierwszego nagłówka na starcie danych
+        elif pierwszy_wiersz_bez_naglowka:
+            is_new_section = True
+            sekcja_tytul = str(kat) if kat else "Zestaw Ćwiczeń"
+            ostatnia_kategoria = kat
+            pierwszy_wiersz_bez_naglowka = False
             
-            # Zielony pasek nagłówka dnia
-            nazwa_dnia = cw.get('nazwa', '') if isinstance(cw, dict) else str(cw)
+        # Warunek 3: Plan ukierunkowany - wykrycie zmiany bloku / kategorii ćwiczeń
+        elif not ma_naglowki_dni and kat != ostatnia_kategoria:
+            is_new_section = True
+            sekcja_tytul = str(kat) if kat else "Kolejna Sekcja"
+            ostatnia_kategoria = kat
+            
+        # Rysowanie struktury nagłówkowej, jeśli spełniony został jeden z powyższych warunków
+        if is_new_section:
+            if row_idx > 7: 
+                row_idx += 1  # Estetyczny dodatkowy odstęp między tabelami
+            
+            # Zielony pasek tytułowy sekcji
             ws.merge_cells(start_row=row_idx, start_column=1, end_row=row_idx, end_column=6)
-            c_day = ws.cell(row=row_idx, column=1, value=f"📋 {nazwa_dnia}")
+            c_day = ws.cell(row=row_idx, column=1, value=f"📋 {sekcja_tytul}")
             c_day.font = font_white
             c_day.fill = fill_day
             c_day.alignment = Alignment(vertical='center', horizontal='left')
-            for i in range(1, 7): ws.cell(row=row_idx, column=i).border = thin_border
+            for i in range(1, 7): 
+                ws.cell(row=row_idx, column=i).border = thin_border
             row_idx += 1
             
-            # Nagłówki tabeli (Jasnozielone)
+            # Wiersz z brakującymi dotychczas nazwami kolumn (Jasnozielony)
             naglowki = ["L.p.", "Procedura / Ćwiczenie", "Czas", "Dawkowanie / Parametry", "Anatomia / Cel", "Instrukcja wykonania"]
             for i, nagl in enumerate(naglowki, 1):
                 c_h = ws.cell(row=row_idx, column=i, value=nagl)
@@ -594,29 +622,35 @@ def generuj_excel_fizjo(liczba_dni):
                 c_h.border = thin_border
                 c_h.alignment = Alignment(horizontal="center", vertical="center")
             row_idx += 1
-            lp = 1
+            lp = 1  # Resetowanie licznika pozycji wewnątrz nowo otwartej sekcji
+            
+        if kat == "NAGŁÓWEK DNIA":
+            continue
+            
+        # Wiersze z danymi ćwiczenia
+        if isinstance(cw, dict):
+            n_cw = cw.get('nazwa', 'Brak')
+            c_min = f"{cw.get('czas_min', 0)} min"
+            param = cw.get('parametry', '-')
+            mies = cw.get('miesnie', '-')
+            opis = cw.get('opis', '-')
         else:
-            if isinstance(cw, dict):
-                n_cw = cw.get('nazwa', 'Brak')
-                c_min = f"{cw.get('czas_min', 0)} min"
-                param = cw.get('parametry', '-')
-                mies = cw.get('miesnie', '-')
-                opis = cw.get('opis', '-')
-            else:
-                n_cw = str(cw); c_min = "-"; param = "-"; mies = "-"; opis = "-"
-                
-            dane_wiersza = [lp, n_cw, c_min, param, mies, opis]
-            for i, val in enumerate(dane_wiersza, 1):
-                c_d = ws.cell(row=row_idx, column=i, value=val)
-                c_d.border = thin_border
-                c_d.alignment = Alignment(wrap_text=True, vertical='top', horizontal='left' if i > 1 else 'center')
-            row_idx += 1; lp += 1
+            n_cw = str(cw); c_min = "-"; param = "-"; mies = "-"; opis = "-"
+            
+        dane_wiersza = [lp, n_cw, c_min, param, mies, opis]
+        for i, val in enumerate(dane_wiersza, 1):
+            c_d = ws.cell(row=row_idx, column=i, value=val)
+            c_d.border = thin_border
+            c_d.alignment = Alignment(wrap_text=True, vertical='top', horizontal='left' if i > 1 else 'center')
+        row_idx += 1; lp += 1
 
-    # Szerokości kolumn dla planu standardowego
+    # Automatyczne szerokości kolumn dostosowane do układu standardowego
     for c_letter, c_width in [('A', 6), ('B', 30), ('C', 10), ('D', 20), ('E', 25), ('F', 50)]:
         ws.column_dimensions[c_letter].width = c_width
 
-    bio = io.BytesIO(); wb.save(bio); return bio.getvalue()
+    bio = io.BytesIO()
+    wb.save(bio)
+    return bio.getvalue()
 
 def generuj_excel_gym(liczba_dni):
     if not st.session_state.wylosowany_plan_cache: return None
