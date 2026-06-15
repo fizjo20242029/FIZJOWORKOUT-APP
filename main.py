@@ -330,6 +330,7 @@ for compliance_baza in [BAZA_FIZJO, BAZA_SILOWNIA, GLOBALNA_BAZA]:
     for compliance_kat in compliance_baza:
         compliance_baza[compliance_kat] = sorted(compliance_baza[compliance_kat], key=lambda compliance_x: compliance_x['nazwa'].lower())
 # --- Wczytywanie bazy protokołów klinicznych ---
+@st.cache_data
 def wczytaj_protokoly():
     if os.path.exists("protokoly.json"):
         try:
