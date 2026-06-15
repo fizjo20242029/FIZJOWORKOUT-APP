@@ -552,6 +552,36 @@ def generuj_excel(liczba_dni):
     writer.close()
     return bio.getvalue()
 
+# --- NOWOŚĆ: WCZYTYWANIE I GENEROWANIE PROTOKOŁÓW KLINICZNYCH ---
+def wczytaj_protokoly():
+    if os.path.exists("protokoly.json"):
+        try:
+            with open("protokoly.json", "r", encoding="utf-8") as f: return json.load(f)
+        except: pass
+    return {}
+
+PROTOKOLY_KLINICZNE = wczytaj_protokoly()
+
+def generuj_protokol(nazwa_choroby):
+    plan = []
+    naglowek = {"nazwa": f"PROTOKÓŁ: {nazwa_choroby}", "typ": "Kliniczny", "partie": "-", "opis": "Zestaw ułożony celowo pod jednostkę chorobową.", "czas_min": 0, "parametry": "-", "miesnie": "-", "uwagi": ""}
+    plan.append(("NAGŁÓWEK DNIA", naglowek))
+    
+    for nazwa_cw in PROTOKOLY_KLINICZNE.get(nazwa_choroby, []):
+        znaleziono = False
+        for kat, lista in GLOBALNA_BAZA.items():
+            for cw in lista:
+                if cw["nazwa"] == nazwa_cw:
+                    cw_kopia = cw.copy()
+                    cw_kopia["uwagi"] = ""
+                    etykieta = f"GYM: {kat}" if kat in BAZA_SILOWNIA and kat not in BAZA_FIZJO else kat
+                    plan.append((etykieta, cw_kopia))
+                    znaleziono = True
+                    break
+            if znaleziono: break
+            
+    st.session_state.wylosowany_plan_cache = plan
+    st.session_state.is_gym = False
 # ==============================================================================
 # UI - INTERFEJS STRONY WEBOWEJ
 # ==============================================================================
@@ -617,6 +647,15 @@ with st.sidebar:
     if st.button("❌ CZYŚĆ EKRAN (RESET)", use_container_width=True):
         st.session_state.wylosowany_plan_cache = []
         st.rerun()
+    st.divider()
+    st.header("🏥 Protokoły Kliniczne")
+    if PROTOKOLY_KLINICZNE:
+        wybrana_choroba = st.selectbox("Wybierz schorzenie:", list(PROTOKOLY_KLINICZNE.keys()))
+        if st.button("⚕️ GENERUJ PROTOKÓŁ", use_container_width=True):
+            generuj_protokol(wybrana_choroba)
+            st.rerun()
+    else:
+        st.caption("Brak pliku protokoly.json")    
         
     st.divider()
     if st.session_state.wylosowany_plan_cache:
