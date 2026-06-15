@@ -541,14 +541,14 @@ def generuj_excel_fizjo(liczba_dni):
         return None
     
     dane_excel = [
-        ["KARTA REHABILITACYJNA PACJENTA", "", "", "", "", ""],
+        ["KARTA PACJENTA / PLAN TRENINGOWY", "", "", "", "", ""],
         ["Imię i Nazwisko:", "", "", "Data:", "", ""],
         ["Status / Uwagi główne:", "", "", "", "", ""],
         ["", "", "", "", "", ""]
     ]
     
     realny_czas = sum(x[1].get('czas_min', 0) for x in st.session_state.wylosowany_plan_cache if x[0] != "NAGŁÓWEK DNIA")
-    dane_excel.append(["Całkowity szacowany czas terapii:", f"{realny_czas} min", "", "", "", ""])
+    dane_excel.append(["Całkowity szacowany czas terapii/treningu:", f"{realny_czas} min", "", "", "", ""])
     dane_excel.append(["", "", "", "", "", ""])
     
     czasy_dni = []
@@ -564,18 +564,26 @@ def generuj_excel_fizjo(liczba_dni):
             if dzien_aktualny > 0: dane_excel.append(["", "", "", "", "", ""])
             dzien_aktualny += 1
             czas_tego_dnia = czasy_dni[dzien_aktualny - 1] if dzien_aktualny <= len(czasy_dni) else 0
-            dane_excel.append([f"📋 {cw['nazwa']} | Łączny czas zabiegów: {czas_tego_dnia} min", "", "", "", "", ""])
-            dane_excel.append(["L.p.", "Procedura / Ćwiczenie", "Czas", "Dawkowanie / Parametry", "Anatomia / Cel", "Instrukcja wykonania dla pacjenta"])
+            dane_excel.append([f"📋 {cw.get('nazwa', '')} | Łączny czas: {czas_tego_dnia} min", "", "", "", "", ""])
+            dane_excel.append(["L.p.", "Procedura / Ćwiczenie", "Czas", "Dawkowanie / Parametry", "Anatomia / Cel", "Instrukcja wykonania"])
             lp = 1
         else:
-            dane_excel.append([lp, cw['nazwa'], f"{cw.get('czas_min', 0)} min", cw['parametry'], cw['miesnie'], cw['opis']])
+            # Używamy .get(), aby funkcja nie wywalała się na ćwiczeniach bez opisów
+            dane_excel.append([
+                lp, 
+                cw.get('nazwa', 'Brak nazwy'), 
+                f"{cw.get('czas_min', 0)} min", 
+                cw.get('parametry', '-'), 
+                cw.get('miesnie', '-'), 
+                cw.get('opis', '-')
+            ])
             lp += 1
 
     df = pd.DataFrame(dane_excel)
     bio = io.BytesIO()
     with pd.ExcelWriter(bio, engine='openpyxl') as writer:
-        df.to_excel(writer, index=False, header=False, sheet_name='Rehabilitacja')
-        ws = writer.sheets['Rehabilitacja']
+        df.to_excel(writer, index=False, header=False, sheet_name='Plan_Standardowy')
+        ws = writer.sheets['Plan_Standardowy']
         for c_letter, c_width in [('A', 6), ('B', 35), ('C', 10), ('D', 20), ('E', 25), ('F', 60)]:
             ws.column_dimensions[c_letter].width = c_width
 
@@ -1033,26 +1041,37 @@ with st.sidebar:
         st.success("Plan gotowy!")
         st.download_button("💾 POBIERZ RAPORT DOCX", generuj_docx(), "Raport_Pacjenta.docx", use_container_width=True)
         
-        # Flaga sprawdzająca czy aktywny plan to siłownia, czy fizjoterapia
-        is_gym_active = st.session_state.get('is_gym', False)
-        
-        st.download_button(
-            "📊 GENERUJ EXCEL FIZJO", 
-            generuj_excel_fizjo(dni), 
-            "Plan_Rehabilitacji.xlsx", 
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", 
-            use_container_width=True,
-            type="primary" if not is_gym_active else "secondary"
-        )
-        
-        st.download_button(
-            "🏋️‍♂️ GENERUJ EXCEL GYM (52 TYG)", 
-            generuj_excel_gym(dni), 
-            "Dziennik_Treningowy.xlsx", 
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", 
-            use_container_width=True,
-            type="primary" if is_gym_active else "secondary"
-        )
+        # --- INTELIGENTNY DETEKTOR TYPU PLANU ---
+        # Aplikacja sprawdza, czy stworzono plan typu "Split"
+        czy_split = False
+        for kat, cw in st.session_state.wylosowany_plan_cache:
+            if kat == "NAGŁÓWEK DNIA" and cw.get("typ") == "Split":
+                czy_split = True
+                break
+                
+        # --- RYSOWANIE ODPOWIEDNIEGO PRZYCISKU ---
+        if czy_split:
+            dane_gym = generuj_excel_gym(dni)
+            if dane_gym:
+                st.download_button(
+                    "🏋️‍♂️ GENERUJ EXCEL (DZIENNIK 52 TYG)", 
+                    dane_gym, 
+                    "Dziennik_Treningowy_Split.xlsx", 
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", 
+                    use_container_width=True,
+                    type="primary"
+                )
+        else:
+            dane_fizjo = generuj_excel_fizjo(dni)
+            if dane_fizjo:
+                st.download_button(
+                    "📊 GENERUJ EXCEL (STANDARDOWY)", 
+                    dane_fizjo, 
+                    "Plan_Kierunkowy.xlsx", 
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", 
+                    use_container_width=True,
+                    type="primary"
+                )
 # ZAKŁADKI GŁÓWNE
 tab1, tab2, tab_protokoly, tab3, tab4 = st.tabs(["📝 Twój Plan", "➕ Kreator", "🏥 Protokoły Kliniczne", "✨ Asystent AI", "⚙️ Baza Ćwiczeń"])
 
