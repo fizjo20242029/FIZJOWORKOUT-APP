@@ -87,7 +87,7 @@ BAZA_FIZJO = {
         {"nazwa": "Clamshell (Muszelka)", "opis": "INSTRUKCJA: Leżenie na boku, kolana ugięte. Unieś górne kolano.", "czas_min": 2, "parametry": "3 serie x 15 na stronę", "miesnie": "Pośladkowy średni"},
         {"nazwa": "Unoszenie prostej nogi (SLR)", "opis": "INSTRUKCJA: Unoś prostą nogę do wysokości drugiego kolana.", "czas_min": 2, "parametry": "3 serie x 12 na nogę", "miesnie": "Prosty uda"},
         {"nazwa": "Martwy ciąg na jednej nodze", "opis": "INSTRUKCJA: Stojąc na jednej nodze, wykonaj skłon w przód.", "czas_min": 3, "parametry": "3 serie x 8 na stronę", "miesnie": "Dwugłowy uda"},
-        {"nazwa": "Krzesełko przy ścianie", "opis": "INSTRUKCJA: Oprzyj plecy o ścianę, zejdź biodrami do kąta 90 stopni. Trzymaj nieruchomo.", "czas_min": 2, "parametry": "3x30 sekund", "miesnie": "Czworogłowy uda, stabilizacja kolana"}
+        {"nazwa": "Krzesełko przy ścianie", "opis": "INSTRUKCJA: Oprzyj plecy o ścianę, zejdź biodrami do kąta 90 stopni. Trzymaj nieruchomo.", "czas_min": 2, "parametry": "3x30 sekund", "miesnie": "Czworogłowy uda, stabilizacja kolana"},
         {"nazwa": "Ślizg nerwu kulszowego (Neuromobilizacja)", "opis": "INSTRUKCJA: Leżenie tyłem, noga ugięta w biodrze do 90st. Prostuj kolano zadzierając palce stopy na siebie (napięcie), a opuszczając stopę obciągaj palce (luzowanie).", "czas_min": 2, "parametry": "15 powtórzeń na stronę", "miesnie": "Układ nerwowy, tylna taśma"},
         {"nazwa": "Rozciąganie zginaczy biodra w klęku", "opis": "INSTRUKCJA: Klęk jednonóż. Wypchnij miednicę mocno do przodu, zachowując wyprostowany tułów, aż poczujesz rozciąganie z przodu uda nogi zakrocznej.", "czas_min": 2, "parametry": "3x30 sekund na stronę", "miesnie": "Mięsień biodrowo-lędźwiowy, prosty uda"},
     ]
