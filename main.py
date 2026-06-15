@@ -555,10 +555,6 @@ st.markdown("Zintegrowane środowisko projektowania programów treningowych.")
 
 with st.sidebar:
     st.header("🔑 Dostęp do AI")
-# ... (reszta kodu pozostaje bez zmian)
-
-with st.sidebar:
-    st.header("🔑 Dostęp do AI")
     user_api_key = st.text_input("Twój klucz API Groq:", type="password")
     groq_client = Groq(api_key=user_api_key) if user_api_key else None
 
