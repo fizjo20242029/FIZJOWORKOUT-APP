@@ -84,7 +84,6 @@ BAZA_FIZJO = {
         {"nazwa": "PIR mięśnia piersiowego większego", "opis": "INSTRUKCJA: Leżenie tyłem na brzegu kozetki, ręka zwisa. Lekko naciskaj ręką w górę przeciw oporowi (20% siły) przez 8s. Rozluźnij z wydechem i pozwól ręce opaść niżej.", "czas_min": 3, "parametry": "4 cykle na stronę", "miesnie": "Piersiowy większy"},
     
     ],
-    
     "Core (Tułów)": [
         {"nazwa": "Plank (Podpór przodem)", "opis": "INSTRUKCJA: Oprzyj się na przedramionach i palcach stóp. Ciało w linii prostej.", "czas_min": 3, "parametry": "3 serie x 30 sekund", "miesnie": "Core"},
         {"nazwa": "Side Plank (Podpór bokiem)", "opis": "INSTRUKCJA: Leżenie na boku, podparcie na przedramieniu. Unieś biodra.", "czas_min": 3, "parametry": "2 serie x 20 sekund na stronę", "miesnie": "Skośne brzucha"},
@@ -138,7 +137,7 @@ BAZA_FIZJO = {
         {"nazwa": "Rolowanie pasma biodrowo-piszczelowego (ITB)", "opis": "INSTRUKCJA: Podpór bokiem na przedramieniu z wałkiem pod udem. Powoli roluj zewnętrzną część uda od biodra aż nad kolano. Unikaj rolowania samych stawów.", "czas_min": 3, "parametry": "2 minuty na stronę", "miesnie": "Pasmo biodrowo-piszczelowe (ITB), TFL"},
         {"nazwa": "Korekcja miednicy (Drop pelvis)", "opis": "INSTRUKCJA: Stań jedną nogą na stepie/schodku, druga noga zwisa. Kontrolowanie opuszczaj zwisającą nogę (biodro opada) i unoś z powrotem aktywując pośladek nogi podporowej.", "czas_min": 3, "parametry": "3x12 powtórzeń na nogę", "miesnie": "Pośladkowy średni, stabilizacja miednicy"},
         
-    ]
+    ],
 
     "Neurologia i Koordynacja": [
         {"nazwa": "Ćwiczenia Frenkla (Ślizganie piętą)", "opis": "INSTRUKCJA: Leżenie tyłem. Ze wzrokową kontrolą ruchu powoli przesuwaj piętę jednej nogi wzdłuż piszczeli drugiej nogi, od kostki aż do kolana i z powrotem.", "czas_min": 3, "parametry": "10 powtórzeń na nogę", "miesnie": "Koordynacja, propriocepcja, układ nerwowy"},
