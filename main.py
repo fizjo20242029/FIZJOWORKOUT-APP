@@ -477,37 +477,90 @@ with st.sidebar:
 tab1, tab2, tab3, tab4 = st.tabs(["📝 Twój Plan", "➕ Kreator", "✨ Asystent AI", "⚙️ Baza Ćwiczeń"])
 
 # ZAKŁADKA 1: WYGENEROWANY PLAN
+# ZAKŁADKA 1: WYGENEROWANY PLAN
 with tab1:
     if not st.session_state.wylosowany_plan_cache:
-        st.info("👈 Wygeneruj plan w panelu bocznym.")
+        st.info("👈 Użyj panelu bocznego, aby wygenerować plan lub przejdź do Kreatora.")
     else:
-        for idx, (kat, cw) in enumerate(st.session_state.wylosowany_plan_cache):
-            if kat == "NAGŁÓWEK DNIA":
-                st.markdown(f"### 📅 {cw['nazwa']}")
-                if st.button("Usuń dzień", key=f"del_day_{idx}", type="primary"):
-                    st.session_state.wylosowany_plan_cache.pop(idx)
-                    st.rerun()
-                continue
+        # 1. Grupujemy plan w "bloki dni", aby łatwo manipulować całymi dniami
+        days_blocks = []
+        current_block = []
+        for item in st.session_state.wylosowany_plan_cache:
+            if item[0] == "NAGŁÓWEK DNIA":
+                if current_block:
+                    days_blocks.append(current_block)
+                current_block = [item]
+            else:
+                current_block.append(item)
+        if current_block:
+            days_blocks.append(current_block)
+
+        # 2. Renderowanie widoku i przycisków
+        abs_idx = 0  # Globalny indeks w st.session_state.wylosowany_plan_cache
+        licznik = 1
+        
+        for block_idx, block in enumerate(days_blocks):
+            for item_idx_in_block, (kat, cw) in enumerate(block):
                 
-            with st.expander(f"{idx+1}. {cw['nazwa']} ({kat})", expanded=True):
-                col1, col2 = st.columns([3, 2])
-                with col1:
-                    nowe_parametry = st.text_input("Zalecenie", cw['parametry'], key=f"p_{idx}")
-                    nowe_uwagi = st.text_input("Uwagi", cw.get('uwagi', ''), key=f"u_{idx}")
-                    st.session_state.wylosowany_plan_cache[idx][1]['parametry'] = nowe_parametry
-                    st.session_state.wylosowany_plan_cache[idx][1]['uwagi'] = nowe_uwagi
-                    st.caption(f"**Anatomia:** {cw['miesnie']}")
-                with col2:
-                    c_up, c_down, c_del = st.columns(3)
-                    if idx > 0 and c_up.button("⬆️", key=f"up_{idx}"):
-                        st.session_state.wylosowany_plan_cache[idx], st.session_state.wylosowany_plan_cache[idx-1] = st.session_state.wylosowany_plan_cache[idx-1], st.session_state.wylosowany_plan_cache[idx]
+                # A. Renderowanie Nagłówka Dnia z zarządzaniem
+                if kat == "NAGŁÓWEK DNIA":
+                    st.markdown(f"### 📅 {cw['nazwa']}")
+                    
+                    # Przyciski zarządzania całym dniem (rozmieszczenie kolumn)
+                    c1, c2, c3, c4 = st.columns([1.5, 1.5, 2, 5])
+                    
+                    if block_idx > 0:
+                        if c1.button("⬆️ Dzień", key=f"up_day_{abs_idx}", use_container_width=True):
+                            days_blocks[block_idx], days_blocks[block_idx-1] = days_blocks[block_idx-1], days_blocks[block_idx]
+                            st.session_state.wylosowany_plan_cache = [i for b in days_blocks for i in b]
+                            st.rerun()
+                    
+                    if block_idx < len(days_blocks) - 1:
+                        if c2.button("⬇️ Dzień", key=f"down_day_{abs_idx}", use_container_width=True):
+                            days_blocks[block_idx], days_blocks[block_idx+1] = days_blocks[block_idx+1], days_blocks[block_idx]
+                            st.session_state.wylosowany_plan_cache = [i for b in days_blocks for i in b]
+                            st.rerun()
+                            
+                    if c3.button("❌ Usuń cały", key=f"del_day_{abs_idx}", type="primary", use_container_width=True):
+                        days_blocks.pop(block_idx)
+                        st.session_state.wylosowany_plan_cache = [i for b in days_blocks for i in b]
                         st.rerun()
-                    if idx < len(st.session_state.wylosowany_plan_cache) - 1 and c_down.button("⬇️", key=f"down_{idx}"):
-                        st.session_state.wylosowany_plan_cache[idx], st.session_state.wylosowany_plan_cache[idx+1] = st.session_state.wylosowany_plan_cache[idx+1], st.session_state.wylosowany_plan_cache[idx]
-                        st.rerun()
-                    if c_del.button("❌", key=f"del_{idx}", type="primary"):
-                        st.session_state.wylosowany_plan_cache.pop(idx)
-                        st.rerun()
+                        
+                    licznik = 1
+                    abs_idx += 1
+                    continue
+                    
+                # B. Renderowanie pojedynczego ćwiczenia
+                with st.expander(f"{licznik}. {cw['nazwa']} ({kat})", expanded=True):
+                    col1, col2 = st.columns([3, 2])
+                    with col1:
+                        nowe_parametry = st.text_input("Zalecenie", cw['parametry'], key=f"p_{abs_idx}")
+                        nowe_uwagi = st.text_input("Uwagi", cw.get('uwagi', ''), key=f"u_{abs_idx}")
+                        # Zapis w czasie rzeczywistym
+                        st.session_state.wylosowany_plan_cache[abs_idx][1]['parametry'] = nowe_parametry
+                        st.session_state.wylosowany_plan_cache[abs_idx][1]['uwagi'] = nowe_uwagi
+                        st.caption(f"**Anatomia:** {cw['miesnie']}")
+                    with col2:
+                        c_up, c_down, c_del = st.columns(3)
+                        
+                        # Blokady, aby uniemożliwić przesunięcie ćwiczenia poza jego dzień
+                        moze_w_gore = abs_idx > 0 and st.session_state.wylosowany_plan_cache[abs_idx-1][0] != "NAGŁÓWEK DNIA"
+                        moze_w_dol = abs_idx < len(st.session_state.wylosowany_plan_cache) - 1 and st.session_state.wylosowany_plan_cache[abs_idx+1][0] != "NAGŁÓWEK DNIA"
+                        
+                        if moze_w_gore and c_up.button("⬆️", key=f"up_{abs_idx}"):
+                            st.session_state.wylosowany_plan_cache[abs_idx], st.session_state.wylosowany_plan_cache[abs_idx-1] = st.session_state.wylosowany_plan_cache[abs_idx-1], st.session_state.wylosowany_plan_cache[abs_idx]
+                            st.rerun()
+                        
+                        if moze_w_dol and c_down.button("⬇️", key=f"down_{abs_idx}"):
+                            st.session_state.wylosowany_plan_cache[abs_idx], st.session_state.wylosowany_plan_cache[abs_idx+1] = st.session_state.wylosowany_plan_cache[abs_idx+1], st.session_state.wylosowany_plan_cache[abs_idx]
+                            st.rerun()
+                            
+                        if c_del.button("❌", key=f"del_{abs_idx}", type="primary"):
+                            st.session_state.wylosowany_plan_cache.pop(abs_idx)
+                            st.rerun()
+                            
+                licznik += 1
+                abs_idx += 1
 
 # ZAKŁADKA 2: KREATOR MANUALNY
 with tab2:
