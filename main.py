@@ -790,12 +790,13 @@ st.markdown("Zintegrowane środowisko projektowania programów treningowych.")
 
 # Kod stylizujący pływający przycisk "Wróć na górę"
 # Kod stylizujący pływający przycisk "Wróć na górę" (Lewa strona)
+# Kod stylizujący pływający przycisk "Wróć na górę" (Lewa strona, poza paskiem bocznym)
 st.markdown("""
 <style>
 .back-to-top {
     position: fixed;
     bottom: 20px;
-    left: 20px; /* Zmieniono z right na left */
+    left: 320px; /* Przesunięto o 320px w prawo, aby ominąć pasek boczny */
     background-color: #28a745;
     color: white;
     border-radius: 50%;
