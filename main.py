@@ -683,9 +683,6 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 with st.sidebar:
-# ... (reszta kodu bez zmian)
-
-with st.sidebar:
     st.header("🔑 Dostęp do AI")
     user_api_key = st.text_input("Twój klucz API Groq:", type="password", help="Pobierz darmowy klucz ze strony console.groq.com")
     st.caption("Nie masz klucza? Pobierz go bezpłatnie ze strony: [console.groq.com](https://console.groq.com/)")
