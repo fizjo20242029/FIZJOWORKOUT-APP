@@ -60,7 +60,7 @@ BAZA_FIZJO = {
         {"nazwa": "Ślizganie ramion po ścianie", "opis": "INSTRUKCJA: Oprzyj plecy o ścianę. Ręce ugięte 90 stopni. Przesuwaj ramiona w górę i w dół.", "czas_min": 2, "parametry": "3 serie x 12 powtórzeń", "miesnie": "Czworoboczny dolny"},
         {"nazwa": "Uginanie przedramion z supinacją", "opis": "INSTRUKCJA: W staniu, hantle chwytem neutralnym. Uginaj łokcie rotując dłonie.", "czas_min": 2, "parametry": "3 serie x 15 powtórzeń", "miesnie": "Biceps"},
         {"nazwa": "Prostowanie przedramion w opadzie", "opis": "INSTRUKCJA: Opad tułowia, łokcie 90 stopni. Prostuj ramię w tył.", "czas_min": 3, "parametry": "3 serie x 12 powtórzeń", "miesnie": "Triceps"},
-        {"nazwa": "Spacer farmera z kettlebell", "opis": "INSTRUKCJA: Chwyć odważniki. Idź powolnym krokiem ze stabilnymi barkami.", "czas_min": 3, "parametry": "3 serie x 45 sekund", "miesnie": "Przedramiona, góra pleców"}
+        {"nazwa": "Spacer farmera z kettlebell", "opis": "INSTRUKCJA: Chwyć odważniki. Idź powolnym krokiem ze stabilnymi barkami.", "czas_min": 3, "parametry": "3 serie x 45 sekund", "miesnie": "Przedramiona, góra pleców"},
         {"nazwa": "Ślizg nerwu pośrodkowego", "opis": "INSTRUKCJA: Stojąc przy ścianie, ramię odwiedzione do 90st. Wykonuj powolny wyprost łokcia i nadgarstka, jednocześnie pochylając głowę w stronę przeciwną.", "czas_min": 2, "parametry": "15 powtórzeń na stronę", "miesnie": "Układ nerwowy obręczy barkowej"},
     ],
     "Core (Tułów)": [
