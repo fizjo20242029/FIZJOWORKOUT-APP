@@ -1,0 +1,12 @@
+{
+  "Zespół bólowy odcinka szyjnego (Cervicalgia)": ["Retrakcja szyi (Cofanie brody)", "Rozciąganie trapeziusa", "Rozciąganie dźwigacza łopatki", "Automobilizacja z wałkiem"],
+  "Zespół bólowy odcinka piersiowego (Thoracalgia)": ["Koci grzbiet", "Ślizganie ramion po ścianie", "Mobilizacja klatki w rotacji", "Wdech ze wznosem ramion"],
+  "Zespół bólowy odcinka lędźwiowego (Lumbago)": ["Plank (Podpór przodem)", "Bird Dog (Pies-ptak)", "Mostki biodrowe (Glute Bridge)", "Dead Bug (Martwy robak)"],
+  "Rwa kulszowa": ["Ślizg nerwu kulszowego (Neuromobilizacja)", "Bird Dog (Pies-ptak)", "Mostki biodrowe (Glute Bridge)", "Clamshell (Muszelka)"],
+  "Rwa ramienna": ["Ślizg nerwu pośrodkowego", "Retrakcja szyi (Cofanie brody)", "Ślizganie ramion po ścianie", "Rozciąganie trapeziusa"],
+  "Rwa udowa": ["Rozciąganie zginaczy biodra w klęku", "Dead Bug (Martwy robak)", "Plank (Podpór przodem)", "Mostki biodrowe (Glute Bridge)"],
+  "Przepuklina krążka międzykręgowego": ["Przeprosty McKenziego (Leżenie przodem)", "Bird Dog (Pies-ptak)", "Plank (Podpór przodem)", "Oddech przeponowy w leżeniu"],
+  "Wypuklina krążka międzykręgowego": ["Przeprosty McKenziego (Leżenie przodem)", "Bird Dog (Pies-ptak)", "Hollow Body (Pozycja kołyski)", "Oddech asymetryczny na boku"],
+  "Dyskopatia wielopoziomowa": ["Oddech przeponowy w leżeniu", "Bird Dog (Pies-ptak)", "Mostki biodrowe (Glute Bridge)", "Niedźwiedź dynamiczny"],
+  "Spondyloartroza (zmiany zwyrodnieniowe)": ["Koci grzbiet", "Mostki biodrowe (Glute Bridge)", "Rozciąganie pośladków (Gołąb)", "Oddech jednostronny w pozycji Sfinksa"]
+}
