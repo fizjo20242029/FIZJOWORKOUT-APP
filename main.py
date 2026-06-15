@@ -62,6 +62,8 @@ BAZA_FIZJO = {
         {"nazwa": "Prostowanie przedramion w opadzie", "opis": "INSTRUKCJA: Opad tułowia, łokcie 90 stopni. Prostuj ramię w tył.", "czas_min": 3, "parametry": "3 serie x 12 powtórzeń", "miesnie": "Triceps"},
         {"nazwa": "Spacer farmera z kettlebell", "opis": "INSTRUKCJA: Chwyć odważniki. Idź powolnym krokiem ze stabilnymi barkami.", "czas_min": 3, "parametry": "3 serie x 45 sekund", "miesnie": "Przedramiona, góra pleców"},
         {"nazwa": "Ślizg nerwu pośrodkowego", "opis": "INSTRUKCJA: Stojąc przy ścianie, ramię odwiedzione do 90st. Wykonuj powolny wyprost łokcia i nadgarstka, jednocześnie pochylając głowę w stronę przeciwną.", "czas_min": 2, "parametry": "15 powtórzeń na stronę", "miesnie": "Układ nerwowy obręczy barkowej"},
+        {"nazwa": "Drenaż limfatyczny kończyny (Automasaż)", "opis": "INSTRUKCJA: Wykonuj delikatne, głaskające ruchy od palców dłoni w kierunku węzłów chłonnych pod pachą. Ruch ma przesunąć skórę, nie naciskać mocno na mięśnie.", "czas_min": 5, "parametry": "5 minut na stronę", "miesnie": "Układ limfatyczny"},
+{"nazwa": "Ćwiczenia czynno-bierne kończyny", "opis": "INSTRUKCJA: Używając zdrowej ręki, powoli i płynnie unoś, zginaj i prostuj osłabioną rękę w bezbolesnym zakresie ruchu.", "czas_min": 3, "parametry": "10 powtórzeń na każdy staw", "miesnie": "Stawy kończyny górnej (Neurologia)"},
     ],
     "Core (Tułów)": [
         {"nazwa": "Plank (Podpór przodem)", "opis": "INSTRUKCJA: Oprzyj się na przedramionach i palcach stóp. Ciało w linii prostej.", "czas_min": 3, "parametry": "3 serie x 30 sekund", "miesnie": "Core"},
@@ -75,7 +77,7 @@ BAZA_FIZJO = {
         {"nazwa": "Skośne spięcia brzucha", "opis": "INSTRUKCJA: Leżenie tyłem. Kieruj ramię w stronę przeciwnego kolana.", "czas_min": 2, "parametry": "3 serie x 15 powtórzeń", "miesnie": "Skośne brzucha"},
         {"nazwa": "Russian Twist", "opis": "INSTRUKCJA: Siad z uniesionymi stopami. Rotuj klatkę piersiową.", "czas_min": 2, "parametry": "3 serie x 20 skrętów", "miesnie": "Skośne brzucha"},
         {"nazwa": "Przeprosty McKenziego (Leżenie przodem)", "opis": "INSTRUKCJA: Leżenie przodem. Dłonie na wysokości barków. Powoli prostuj łokcie, unosząc samą klatkę piersiową, miednica zostaje przyklejona do maty.", "czas_min": 2, "parametry": "3x10 powtórzeń", "miesnie": "Prostownik grzbietu"},
-        
+        {"nazwa": "Trening mięśni dna miednicy (Kegla)", "opis": "INSTRUKCJA: W wygodnej pozycji napinaj mięśnie dna miednicy (jak przy próbie zatrzymania strumienia moczu). Utrzymaj napięcie, oddychając swobodnie.", "czas_min": 3, "parametry": "10 spięć po 5 sekund", "miesnie": "Mięśnie dna miednicy"},
     ],
     "Kończyna dolna": [
         {"nazwa": "Przysiad klasyczny (Squat)", "opis": "INSTRUKCJA: Stopy na szerokość barków. Schodź biodrami w dół i w tył.", "czas_min": 2, "parametry": "3 serie x 12 powtórzeń", "miesnie": "Czworogłowy uda, pośladki"},
@@ -90,6 +92,7 @@ BAZA_FIZJO = {
         {"nazwa": "Krzesełko przy ścianie", "opis": "INSTRUKCJA: Oprzyj plecy o ścianę, zejdź biodrami do kąta 90 stopni. Trzymaj nieruchomo.", "czas_min": 2, "parametry": "3x30 sekund", "miesnie": "Czworogłowy uda, stabilizacja kolana"},
         {"nazwa": "Ślizg nerwu kulszowego (Neuromobilizacja)", "opis": "INSTRUKCJA: Leżenie tyłem, noga ugięta w biodrze do 90st. Prostuj kolano zadzierając palce stopy na siebie (napięcie), a opuszczając stopę obciągaj palce (luzowanie).", "czas_min": 2, "parametry": "15 powtórzeń na stronę", "miesnie": "Układ nerwowy, tylna taśma"},
         {"nazwa": "Rozciąganie zginaczy biodra w klęku", "opis": "INSTRUKCJA: Klęk jednonóż. Wypchnij miednicę mocno do przodu, zachowując wyprostowany tułów, aż poczujesz rozciąganie z przodu uda nogi zakrocznej.", "czas_min": 2, "parametry": "3x30 sekund na stronę", "miesnie": "Mięsień biodrowo-lędźwiowy, prosty uda"},
+        {"nazwa": "Ćwiczenia równoważne na jednej nodze (Propriocepcja)", "opis": "INSTRUKCJA: Stań na jednej nodze, lekko zginając kolano. Staraj się utrzymać równowagę. Dla utrudnienia zamknij oczy lub stań na poduszce.", "czas_min": 2, "parametry": "3x30 sekund na nogę", "miesnie": "Stabilizatory stawu skokowego i kolanowego"},
     ]
 }
 
@@ -567,7 +570,14 @@ def generuj_protokol(nazwa_choroby):
     naglowek = {"nazwa": f"PROTOKÓŁ: {nazwa_choroby}", "typ": "Kliniczny", "partie": "-", "opis": "Zestaw ułożony celowo pod jednostkę chorobową.", "czas_min": 0, "parametry": "-", "miesnie": "-", "uwagi": ""}
     plan.append(("NAGŁÓWEK DNIA", naglowek))
     
-    for nazwa_cw in PROTOKOLY_KLINICZNE.get(nazwa_choroby, []):
+    # Wyszukanie listy ćwiczeń w zagnieżdżonym słowniku
+    lista_cwiczen_w_chorobie = []
+    for kategoria, choroby in PROTOKOLY_KLINICZNE.items():
+        if nazwa_choroby in choroby:
+            lista_cwiczen_w_chorobie = choroby[nazwa_choroby]
+            break
+    
+    for nazwa_cw in lista_cwiczen_w_chorobie:
         znaleziono = False
         for kat, lista in GLOBALNA_BAZA.items():
             for cw in lista:
@@ -784,37 +794,41 @@ with tab2:
                 if c2.button("Dodaj", key=f"bg_{cw['nazwa']}"):
                     st.session_state.wylosowany_plan_cache.append((f"GYM: {kat_wyb_g}", cw.copy()))
                     st.toast("Dodano!")
-# NOWA ZAKŁADKA: PROTOKOŁY KLINICZNE (PANEL GŁÓWNY)
-# NOWA ZAKŁADKA: PROTOKOŁY KLINICZNE (PANEL GŁÓWNY)
+
 # NOWA ZAKŁADKA: PROTOKOŁY KLINICZNE (PANEL GŁÓWNY)
 with tab_protokoly:
     st.subheader("🏥 Gotowe Protokoły Kliniczne")
-    st.markdown("Kliknij jednostkę chorobową, aby **zobaczyć podgląd przypisanych ćwiczeń**, a następnie załaduj ją do głównego planu.")
+    st.markdown("Wyszukaj lub wybierz jednostkę z odpowiedniej kategorii. Protokoły są ułożone alfabetycznie.")
     
     if PROTOKOLY_KLINICZNE:
-        # Wyszukiwarka chorób
         szukana_choroba = st.text_input("🔍 Wyszukaj jednostkę chorobową (np. 'rwa', 'zespół'):", key="szukaj_proto").strip().lower()
         st.divider()
         
-        # Filtrowanie i generowanie kart podglądu
         znaleziono_protokol = False
-        for choroba, lista_cwiczen in PROTOKOLY_KLINICZNE.items():
-            if szukana_choroba in choroba.lower():
+        
+        # Iteracja po głównych kategoriach (Kręgosłup, Kończyna itd.)
+        for kategoria_chorob, choroby_w_kategorii in PROTOKOLY_KLINICZNE.items():
+            
+            # Filtrowanie i sortowanie alfabetyczne chorób w locie
+            dopasowane = {choroba: cwiczenia for choroba, cwiczenia in choroby_w_kategorii.items() if szukana_choroba in choroba.lower()}
+            dopasowane_posortowane = dict(sorted(dopasowane.items()))
+            
+            if dopasowane_posortowane:
                 znaleziono_protokol = True
+                st.markdown(f"#### 🔹 {kategoria_chorob}") # Elegancki nagłówek grupy
                 
-                # Zmiana przycisku na expander (Podgląd)
-                with st.expander(f"⚕️ {choroba} (Podgląd: {len(lista_cwiczen)} ćw.)", expanded=False):
-                    st.markdown("**Lista ćwiczeń w tym protokole:**")
-                    for nazwa_cw in lista_cwiczen:
-                        st.markdown(f"• {nazwa_cw}")
-                    
-                    st.write("") # Odstęp dla estetyki
-                    
-                    # Przycisk aktywacji wewnątrz podglądu
-                    if st.button("🚀 URUCHOM TEN PROTOKÓŁ (Załaduj do planu)", key=f"proto_btn_{choroba}", use_container_width=True, type="primary"):
-                        generuj_protokol(choroba)
-                        st.rerun()
-                    
+                for choroba, lista_cwiczen in dopasowane_posortowane.items():
+                    with st.expander(f"⚕️ {choroba} (Podgląd: {len(lista_cwiczen)} ćw.)", expanded=False):
+                        st.markdown("**Lista ćwiczeń w tym protokole:**")
+                        for nazwa_cw in lista_cwiczen:
+                            st.markdown(f"• {nazwa_cw}")
+                        
+                        st.write("") 
+                        if st.button("🚀 URUCHOM TEN PROTOKÓŁ", key=f"proto_btn_{choroba}", use_container_width=True, type="primary"):
+                            generuj_protokol(choroba)
+                            st.rerun()
+                st.write("") # Odstęp między sekcjami
+                
         if not znaleziono_protokol:
             st.info("Nie znaleziono protokołu dla wpisanej frazy.")
     else:
