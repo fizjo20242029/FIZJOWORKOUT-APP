@@ -629,7 +629,12 @@ def generuj_excel_gym(liczba_dni):
                 c.fill = fill_h; c.font = font_w; c.border = thin_border; c.alignment = Alignment(horizontal="center")
             row_idx += 1; ex_nr = 1; dzien_idx += 1
         else:
-            serie, powt = cw['parametry'].split('x') if 'x' in cw['parametry'] else ("1", cw['parametry'])
+            parametry_str = str(cw.get('parametry', ''))
+            if 'x' in parametry_str.lower():
+                czlon = parametry_str.replace('X', 'x').split('x', 1)
+                serie, powt = czlon[0].strip(), czlon[1].strip()
+            else:
+                serie, powt = "1", parametry_str.strip()
             ws_plan.cell(row=row_idx, column=1, value=ex_nr).alignment = Alignment(horizontal="center")
             ws_plan.cell(row=row_idx, column=2, value=cw['nazwa'])
             ws_plan.cell(row=row_idx, column=3, value=serie).alignment = Alignment(horizontal="center")
