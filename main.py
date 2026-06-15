@@ -850,8 +850,7 @@ with tab1:
                         if c_del.button("❌", key=f"del_{abs_idx}", type="primary"):
                             st.session_state.wylosowany_plan_cache.pop(abs_idx)
                             st.rerun()
-                licznik += 1
-                abs_idx += 1
+            
 
 # ZAKŁADKA 2: KREATOR MANUALNY
 with tab2:
