@@ -7,6 +7,7 @@ from docx import Document
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.shared import Inches, Pt
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
+from openpyxl.utils import get_column_letter
 import streamlit as st
 from groq import Groq
 
@@ -494,158 +495,194 @@ def generuj_docx():
     doc.save(bio)
     return bio.getvalue()
 
-def generuj_excel(liczba_dni):
+def generuj_excel_fizjo(liczba_dni):
     if not st.session_state.wylosowany_plan_cache: 
         return None
     
-    dane_excel = []
-    is_gym = st.session_state.get('is_gym', False)
+    dane_excel = [
+        ["KARTA REHABILITACYJNA PACJENTA", "", "", "", "", ""],
+        ["Imię i Nazwisko:", "", "", "Data:", "", ""],
+        ["Status / Uwagi główne:", "", "", "", "", ""],
+        ["", "", "", "", "", ""]
+    ]
     
-    dane_excel.append(["Imię i Nazwisko:", "", "", "", "", "", ""])
-    dane_excel.append(["Płeć:", "", "", "", "", "", ""])
+    realny_czas = sum(x[1].get('czas_min', 0) for x in st.session_state.wylosowany_plan_cache if x[0] != "NAGŁÓWEK DNIA")
+    dane_excel.append(["Całkowity szacowany czas terapii:", f"{realny_czas} min", "", "", "", ""])
+    dane_excel.append(["", "", "", "", "", ""])
     
-    realny_czas = sum(compliance_x[1].get('czas_min', 0) for compliance_x in st.session_state.wylosowany_plan_cache if compliance_x[0] != "NAGŁÓWEK DNIA")
-    if is_gym:
-        dane_excel.append(["Podsumowanie planu:", "Trening Siłowy (Ilościowy)", "", "", "", "", ""])
-    else:
-        dane_excel.append(["Całkowity czas planu:", f"{realny_czas} min", "", "", "", "", ""])
-        
-    dane_excel.append(["", "", "", "", "", "", ""])
-    czy_wielodniowy_excel = any(kat == "NAGŁÓWEK DNIA" for kat, cw in st.session_state.wylosowany_plan_cache)
-    
-    if czy_wielodniowy_excel:
-        czasy_dni = []
-        for k, c in st.session_state.wylosowany_plan_cache:
-            if k == "NAGŁÓWEK DNIA": czasy_dni.append(0)
-            else:
-                if czasy_dni: czasy_dni[-1] += c.get('czas_min', 0)
+    czasy_dni = []
+    for k, c in st.session_state.wylosowany_plan_cache:
+        if k == "NAGŁÓWEK DNIA": czasy_dni.append(0)
+        else:
+            if czasy_dni: czasy_dni[-1] += c.get('czas_min', 0)
 
-        lp = 1
-        dzien_aktualny = 0
-        for idx, (kat, cw) in enumerate(st.session_state.wylosowany_plan_cache):
-            if kat == "NAGŁÓWEK DNIA":
-                if dzien_aktualny > 0: dane_excel.append(["", "", "", "", "", "", ""])
-                dzien_aktualny += 1
-                nazwa_dnia_i_partii = cw['nazwa']
-                if is_gym: dane_excel.append([f"{nazwa_dnia_i_partii}", "", "", "", "", "", ""])
-                else:
-                    czas_tego_dnia = czasy_dni[dzien_aktualny - 1] if dzien_aktualny <= len(czasy_dni) else 0
-                    dane_excel.append([f"{nazwa_dnia_i_partii} - Czas trwania: {czas_tego_dnia} min", "", "", "", "", "", ""])
-                dane_excel.append(["L.p.", "Nazwa ćwiczenia", "Czas", "Ilość serii", "Ilość powtórzeń", "Sposób wykonania", "Uwagi"])
-                lp = 1
-            else:
-                p_lower = str(cw['parametry']).lower()
-                if 'x' in p_lower:
-                    parts = p_lower.split('x')
-                    serie = parts[0].replace('serie','').replace('seria','').strip()
-                    powt = parts[1].replace('powtórzeń','').replace('powtórzenia','').strip()
-                else:
-                    serie = "1"
-                    powt = cw['parametry'].strip()
-                czas_str = "-" if is_gym else f"{cw.get('czas_min', 0)} min"
-                dane_excel.append([lp, cw['nazwa'], czas_str, serie, powt, cw['opis'], cw.get('uwagi', '')])
-                lp += 1
-    else:
-        for dzien in range(1, liczba_dni + 1):
-            dane_excel.append([f"DZIEŃ {dzien}", "", "", "", "", "", ""])
-            dane_excel.append(["L.p.", "Nazwa ćwiczenia", "Czas", "Ilość serii", "Ilość powtórzeń", "Sposób wykonania", "Uwagi"])
-            for compliance_idx, (kat, cw) in enumerate(st.session_state.wylosowany_plan_cache, 1):
-                p_lower = str(cw['parametry']).lower()
-                if 'x' in p_lower:
-                    parts = p_lower.split('x')
-                    serie = parts[0].replace('serie','').replace('seria','').strip()
-                    powt = parts[1].replace('powtórzeń','').replace('powtórzenia','').strip()
-                else:
-                    serie = "1"
-                    powt = cw['parametry'].strip()
-                czas_str = "-" if is_gym else f"{cw.get('czas_min', 0)} min"
-                dane_excel.append([compliance_idx, cw['nazwa'], czas_str, serie, powt, cw['opis'], cw.get('uwagi', '')])
+    lp = 1
+    dzien_aktualny = 0
+    for idx, (kat, cw) in enumerate(st.session_state.wylosowany_plan_cache):
+        if kat == "NAGŁÓWEK DNIA":
+            if dzien_aktualny > 0: dane_excel.append(["", "", "", "", "", ""])
+            dzien_aktualny += 1
+            czas_tego_dnia = czasy_dni[dzien_aktualny - 1] if dzien_aktualny <= len(czasy_dni) else 0
+            dane_excel.append([f"📋 {cw['nazwa']} | Łączny czas zabiegów: {czas_tego_dnia} min", "", "", "", "", ""])
+            dane_excel.append(["L.p.", "Procedura / Ćwiczenie", "Czas", "Dawkowanie / Parametry", "Anatomia / Cel", "Instrukcja wykonania dla pacjenta"])
+            lp = 1
+        else:
+            dane_excel.append([lp, cw['nazwa'], f"{cw.get('czas_min', 0)} min", cw['parametry'], cw['miesnie'], cw['opis']])
+            lp += 1
 
     df = pd.DataFrame(dane_excel)
     bio = io.BytesIO()
-    writer = pd.ExcelWriter(bio, engine='openpyxl')
-    df.to_excel(writer, index=False, header=False, sheet_name='Harmonogram')
-    worksheet = writer.sheets['Harmonogram']
-    
-    for c_letter, c_width in [('A', 8), ('B', 30), ('C', 10), ('D', 12), ('E', 20), ('F', 50), ('G', 25)]:
-        worksheet.column_dimensions[c_letter].width = c_width
+    with pd.ExcelWriter(bio, engine='openpyxl') as writer:
+        df.to_excel(writer, index=False, header=False, sheet_name='Rehabilitacja')
+        ws = writer.sheets['Rehabilitacja']
+        for c_letter, c_width in [('A', 6), ('B', 35), ('C', 10), ('D', 20), ('E', 25), ('F', 60)]:
+            ws.column_dimensions[c_letter].width = c_width
 
-    thin_border = Border(left=Side(style='thin'), right=Side(style='thin'), top=Side(style='thin'), bottom=Side(style='thin'))
-    fill_day = PatternFill(start_color="1F497D", end_color="1F497D", fill_type="solid")
-    fill_header = PatternFill(start_color="8DB4E2", end_color="8DB4E2", fill_type="solid")
-    fill_data_even = PatternFill(start_color="DCE6F1", end_color="DCE6F1", fill_type="solid")
-    
-    data_row_counter = 0
-    for r_idx, r_data in enumerate(dane_excel, 1):
-        val_a = str(r_data[0])
-        if r_idx in [1, 2, 3]:
-            worksheet.cell(row=r_idx, column=1).font = Font(bold=True)
-        elif any(val_a.startswith(prefix) for prefix in ["DZIEŃ", "Poniedziałek", "Wtorek", "Środa", "Czwartek", "Piątek", "Sobota", "Niedziela", "Dzień"]):
-            worksheet.merge_cells(start_row=r_idx, start_column=1, end_row=r_idx, end_column=7)
-            cell = worksheet.cell(row=r_idx, column=1)
-            cell.font = Font(bold=True, color="FFFFFF")
-            cell.fill = fill_day
-            cell.alignment = Alignment(horizontal='center', vertical='center')
-            for c_idx in range(1, 8): worksheet.cell(row=r_idx, column=c_idx).border = thin_border
-            data_row_counter = 0
-        elif val_a == "L.p.":
-            for c_idx in range(1, 8):
-                cell = worksheet.cell(row=r_idx, column=c_idx)
-                cell.font = Font(bold=True)
-                cell.fill = fill_header
-                cell.border = thin_border
-                cell.alignment = Alignment(horizontal='center', vertical='center')
-        elif val_a.isdigit():
-            data_row_counter += 1
-            current_fill = fill_data_even if data_row_counter % 2 == 0 else None
-            for c_idx in range(1, 8):
-                cell = worksheet.cell(row=r_idx, column=c_idx)
-                cell.border = thin_border
-                if current_fill: cell.fill = current_fill
-                cell.alignment = Alignment(wrap_text=True, vertical='top') if c_idx in [6, 7] else Alignment(horizontal='center', vertical='center')
-    writer.close()
+        thin_border = Border(left=Side(style='thin'), right=Side(style='thin'), top=Side(style='thin'), bottom=Side(style='thin'))
+        fill_day = PatternFill(start_color="28A745", end_color="28A745", fill_type="solid")
+        fill_header = PatternFill(start_color="D4EDDA", end_color="D4EDDA", fill_type="solid")
+        
+        for r_idx, r_data in enumerate(dane_excel, 1):
+            val_a = str(r_data[0])
+            if r_idx == 1: ws.cell(row=r_idx, column=1).font = Font(bold=True, size=14, color="28A745")
+            elif val_a.startswith("📋"):
+                ws.merge_cells(start_row=r_idx, start_column=1, end_row=r_idx, end_column=6)
+                cell = ws.cell(row=r_idx, column=1)
+                cell.font = Font(bold=True, color="FFFFFF", size=11)
+                cell.fill = fill_day
+                for c_idx in range(1, 7): ws.cell(row=r_idx, column=c_idx).border = thin_border
+            elif val_a == "L.p.":
+                for c_idx in range(1, 7):
+                    cell = ws.cell(row=r_idx, column=c_idx)
+                    cell.font = Font(bold=True)
+                    cell.fill = fill_header
+                    cell.border = thin_border
+            elif val_a.isdigit():
+                for c_idx in range(1, 7):
+                    cell = ws.cell(row=r_idx, column=c_idx)
+                    cell.border = thin_border
+                    cell.alignment = Alignment(wrap_text=True, vertical='top')
     return bio.getvalue()
 
-# --- NOWOŚĆ: WCZYTYWANIE I GENEROWANIE PROTOKOŁÓW KLINICZNYCH ---
-def wczytaj_protokoly():
-    if os.path.exists("protokoly.json"):
-        try:
-            with open("protokoly.json", "r", encoding="utf-8") as f: return json.load(f)
-        except: pass
-    return {}
-
-PROTOKOLY_KLINICZNE = wczytaj_protokoly()
-
-def generuj_protokol(nazwa_choroby):
-    plan = []
-    naglowek = {"nazwa": f"PROTOKÓŁ: {nazwa_choroby}", "typ": "Kliniczny", "partie": "-", "opis": "Zestaw ułożony celowo pod jednostkę chorobową.", "czas_min": 0, "parametry": "-", "miesnie": "-", "uwagi": ""}
-    plan.append(("NAGŁÓWEK DNIA", naglowek))
+def generuj_excel_gym(liczba_dni):
+    if not st.session_state.wylosowany_plan_cache: return None
+    wb = openpyxl.Workbook()
+    thin_border = Border(left=Side(style='thin'), right=Side(style='thin'), top=Side(style='thin'), bottom=Side(style='thin'))
     
-    # Wyszukanie listy ćwiczeń w zagnieżdżonym słowniku
-    lista_cwiczen_w_chorobie = []
-    for kategoria, choroby in PROTOKOLY_KLINICZNE.items():
-        if nazwa_choroby in choroby:
-            lista_cwiczen_w_chorobie = choroby[nazwa_choroby]
-            break
+    # --- ZAKŁADKA 1: PLAN TRENINGOWY ---
+    ws_plan = wb.active
+    ws_plan.title = "PLAN TRENINGOWY"
+    fill_h = PatternFill(start_color="1F497D", end_color="1F497D", fill_type="solid")
+    font_w = Font(color="FFFFFF", bold=True)
     
-    for nazwa_cw in lista_cwiczen_w_chorobie:
-        znaleziono = False
-        for kat, lista in GLOBALNA_BAZA.items():
-            for cw in lista:
-                if cw["nazwa"] == nazwa_cw:
-                    cw_kopia = cw.copy()
-                    cw_kopia["uwagi"] = ""
-                    etykieta = f"GYM: {kat}" if kat in BAZA_SILOWNIA and kat not in BAZA_FIZJO else kat
-                    plan.append((etykieta, cw_kopia))
-                    znaleziono = True
-                    break
-            if znaleziono: break
+    row_idx = 1
+    dzien_idx = 1
+    for kat, cw in st.session_state.wylosowany_plan_cache:
+        if kat == "NAGŁÓWEK DNIA":
+            if row_idx > 1: row_idx += 1
+            ws_plan.cell(row=row_idx, column=1, value=f"Trening {dzien_idx} - {cw['nazwa']}").font = Font(bold=True, size=14, color="007BFF")
+            row_idx += 1
+            for col_idx, h in enumerate(["NR", "ĆWICZENIE", "SERIE", "POWTÓRZENIA", "TEMPO", "RIR", "PRZERWA", "Wideo"], 1):
+                c = ws_plan.cell(row=row_idx, column=col_idx, value=h)
+                c.fill = fill_h; c.font = font_w; c.border = thin_border; c.alignment = Alignment(horizontal="center")
+            row_idx += 1; ex_nr = 1; dzien_idx += 1
+        else:
+            serie, powt = cw['parametry'].split('x') if 'x' in cw['parametry'] else ("1", cw['parametry'])
+            ws_plan.cell(row=row_idx, column=1, value=ex_nr).alignment = Alignment(horizontal="center")
+            ws_plan.cell(row=row_idx, column=2, value=cw['nazwa'])
+            ws_plan.cell(row=row_idx, column=3, value=serie).alignment = Alignment(horizontal="center")
+            ws_plan.cell(row=row_idx, column=4, value=powt).alignment = Alignment(horizontal="center")
+            for col_idx in range(1, 9): ws_plan.cell(row=row_idx, column=col_idx).border = thin_border
+            row_idx += 1; ex_nr += 1
+    for c_letter, c_width in [('A', 5), ('B', 30), ('C', 10), ('D', 15), ('E', 10), ('F', 10), ('G', 12), ('H', 15)]:
+        ws_plan.column_dimensions[c_letter].width = c_width
+
+    # --- ZAKŁADKA 2: DZIENNIK TRENINGOWY (Cały Rok - 52 tyg) ---
+    ws_dz = wb.create_sheet("DZIENNIK TRENINGOWY")
+    for w in range(52):
+        start_col = 3 + w*18
+        ws_dz.merge_cells(start_row=1, start_column=start_col, end_row=1, end_column=start_col+17)
+        c = ws_dz.cell(row=1, column=start_col, value=f"Tydzień {w+1}")
+        c.alignment = Alignment(horizontal="center"); c.fill = PatternFill(start_color="CCE5FF", end_color="CCE5FF", fill_type="solid"); c.font = Font(bold=True); c.border = thin_border
+        for s in range(6):
+            s_col = start_col + s*3
+            ws_dz.merge_cells(start_row=2, start_column=s_col, end_row=2, end_column=s_col+2)
+            c2 = ws_dz.cell(row=2, column=s_col, value=f"SERIA {s+1}")
+            c2.alignment = Alignment(horizontal="center"); c2.fill = PatternFill(start_color="E6F2FF", end_color="E6F2FF", fill_type="solid"); c2.border = thin_border
+            for idx_h, val_h in enumerate(["CIĘŻAR", "POWT.", "RIR"]):
+                c3 = ws_dz.cell(row=3, column=s_col+idx_h, value=val_h)
+                c3.alignment = Alignment(horizontal="center"); c3.border = thin_border; ws_dz.column_dimensions[get_column_letter(s_col+idx_h)].width = 9
+
+    ws_dz.column_dimensions['A'].width = 12; ws_dz.column_dimensions['B'].width = 30
+    ws_dz.cell(row=3, column=1, value="KOLEJNOŚĆ").font = Font(bold=True); ws_dz.cell(row=3, column=2, value="ĆWICZENIE").font = Font(bold=True)
+    
+    r_dz = 4; ex_nr = 1; dzien_idx = 1; analiza_data = []
+    for kat, cw in st.session_state.wylosowany_plan_cache:
+        if kat == "NAGŁÓWEK DNIA":
+            if r_dz > 4: r_dz += 1
+            ws_dz.merge_cells(start_row=r_dz, start_column=1, end_row=r_dz, end_column=2)
+            c = ws_dz.cell(row=r_dz, column=1, value=f"DZIEŃ {dzien_idx} - {cw['nazwa']}")
+            c.font = Font(bold=True, color="FFFFFF"); c.fill = PatternFill(start_color="007BFF", end_color="007BFF", fill_type="solid")
+            r_dz += 1; ex_nr = 1; dzien_idx += 1
+        else:
+            ws_dz.cell(row=r_dz, column=1, value=ex_nr).alignment = Alignment(horizontal="center"); ws_dz.cell(row=r_dz, column=2, value=cw['nazwa'])
+            ws_dz.cell(row=r_dz, column=1).border = thin_border; ws_dz.cell(row=r_dz, column=2).border = thin_border
+            for i in range(18): ws_dz.cell(row=r_dz, column=3+i).border = thin_border
+            analiza_data.append((cw['nazwa'], r_dz)); r_dz += 1; ex_nr += 1
+
+    # --- ZAKŁADKA 3: ANALIZA PROGRESU (Formuły makrocyklowe) ---
+    ws_an = wb.create_sheet("ANALIZA")
+    def set_block(start_col, title, cols_titles, fill_color):
+        ws_an.merge_cells(start_row=1, start_column=start_col, end_row=1, end_column=start_col+2)
+        c = ws_an.cell(row=1, column=start_col, value=title)
+        c.alignment = Alignment(horizontal="center"); c.font = Font(bold=True); c.fill = PatternFill(start_color=fill_color, end_color=fill_color, fill_type="solid"); c.border = thin_border
+        for i, t in enumerate(cols_titles):
+            c2 = ws_an.cell(row=2, column=start_col+i, value=t)
+            c2.alignment = Alignment(horizontal="center"); c2.font = Font(bold=True, size=10); c2.border = thin_border; ws_an.column_dimensions[get_column_letter(start_col+i)].width = 14
+
+    ws_an.column_dimensions['A'].width = 30; ws_an.merge_cells("A1:A2")
+    c = ws_an.cell(row=1, column=1, value="ĆWICZENIE")
+    c.alignment = Alignment(horizontal="center", vertical="center"); c.fill = fill_h; c.font = font_w
+    
+    for w in range(52): set_block(2 + w*3, f"Tydzień {w+1}", ["Max Ciężar", "Suma Powt.", "Zrealiz. Serie"], "E6F2FF")
+    
+    c_off = 2 + 52*3 # 158
+    mw = [list(range(0,4)), list(range(4,8)), list(range(8,13)), list(range(13,17)), list(range(17,21)), list(range(21,26)), list(range(26,30)), list(range(30,34)), list(range(34,39)), list(range(39,43)), list(range(43,47)), list(range(47,52))]
+    for m in range(12): set_block(c_off + m*3, f"Miesiąc {m+1}", ["Śr. Max Ciężar", "Suma Powt.", "Suma Serii"], "CCE5FF")
+    c_off += 36; 
+    for q in range(4): set_block(c_off + q*3, f"Kwartał {q+1}", ["Śr. Max Ciężar", "Suma Powt.", "Suma Serii"], "99CCFF")
+    c_off += 12; 
+    for h in range(2): set_block(c_off + h*3, f"Półrocze {h+1}", ["Śr. Max Ciężar", "Suma Powt.", "Suma Serii"], "66B2FF")
+    c_off += 6; set_block(c_off, "Cały Rok", ["Śr. Max Ciężar", "Suma Powt.", "Suma Serii"], "3399FF")
+
+    r_an = 3
+    for nazwa, r_in_dz in analiza_data:
+        ws_an.cell(row=r_an, column=1, value=nazwa).border = thin_border
+        for w in range(52):
+            w_cells = [f"'DZIENNIK TRENINGOWY'!{get_column_letter(3 + w*18 + s*3)}{r_in_dz}" for s in range(6)]
+            p_cells = [f"'DZIENNIK TRENINGOWY'!{get_column_letter(4 + w*18 + s*3)}{r_in_dz}" for s in range(6)]
+            ws_an.cell(row=r_an, column=2+w*3, value=f'=IF(COUNT({",".join(w_cells)})>0, MAX({",".join(w_cells)}), "")').border = thin_border
+            ws_an.cell(row=r_an, column=2+w*3+1, value=f'=IF(SUM({",".join(p_cells)})>0, SUM({",".join(p_cells)}), "")').border = thin_border
+            ws_an.cell(row=r_an, column=2+w*3+2, value=f'=IF(COUNT({",".join(w_cells)})>0, COUNT({",".join(w_cells)}), "")').border = thin_border
+        
+        def app_agg(cb, weeks):
+            mx_c = [f"{get_column_letter(2 + w*3)}{r_an}" for w in weeks]
+            pt_c = [f"{get_column_letter(2 + w*3 + 1)}{r_an}" for w in weeks]
+            sr_c = [f"{get_column_letter(2 + w*3 + 2)}{r_an}" for w in weeks]
+            ws_an.cell(row=r_an, column=cb, value=f'=IF(COUNT({",".join(mx_c)})>0, ROUND(AVERAGE({",".join(mx_c)}), 1), "")').border = thin_border
+            ws_an.cell(row=r_an, column=cb+1, value=f'=IF(SUM({",".join(pt_c)})>0, SUM({",".join(pt_c)}), "")').border = thin_border
+            ws_an.cell(row=r_an, column=cb+2, value=f'=IF(SUM({",".join(sr_c)})>0, SUM({",".join(sr_c)}), "")').border = thin_border
             
-    st.session_state.wylosowany_plan_cache = plan
-    st.session_state.is_gym = False
-# ==============================================================================
-# UI - INTERFEJS STRONY WEBOWEJ
-# ==============================================================================
+        c_off = 158
+        for m in range(12): app_agg(c_off + m*3, mw[m])
+        c_off += 36
+        for q in range(4): app_agg(c_off + q*3, [w for m in range(q*3, q*3+3) for w in mw[m]])
+        c_off += 12
+        app_agg(c_off, [w for m in range(0, 6) for w in mw[m]]); app_agg(c_off + 3, [w for m in range(6, 12) for w in mw[m]])
+        c_off += 6; app_agg(c_off, list(range(52)))
+        r_an += 1
+
+    bio = io.BytesIO(); wb.save(bio); return bio.getvalue()
 # ==============================================================================
 # UI - INTERFEJS STRONY WEBOWEJ
 # ==============================================================================
@@ -745,10 +782,28 @@ with st.sidebar:
     st.divider()
     if st.session_state.wylosowany_plan_cache:
         st.success("Plan gotowy!")
-        st.download_button("💾 POBIERZ DOCX", generuj_docx(), "Plan_Treningowy.docx", use_container_width=True)
-        # PRZYWRÓCONY PRZYCISK POBIERANIA EXCELA
-        st.download_button("📊 POBIERZ EXCEL", generuj_excel(dni), "Plan_Treningowy.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
-
+        st.download_button("💾 POBIERZ RAPORT DOCX", generuj_docx(), "Raport_Pacjenta.docx", use_container_width=True)
+        
+        # Flaga sprawdzająca czy aktywny plan to siłownia, czy fizjoterapia
+        is_gym_active = st.session_state.get('is_gym', False)
+        
+        st.download_button(
+            "📊 GENERUJ EXCEL FIZJO", 
+            generuj_excel_fizjo(dni), 
+            "Plan_Rehabilitacji.xlsx", 
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", 
+            use_container_width=True,
+            type="primary" if not is_gym_active else "secondary"
+        )
+        
+        st.download_button(
+            "🏋️‍♂️ GENERUJ EXCEL GYM (52 TYG)", 
+            generuj_excel_gym(dni), 
+            "Dziennik_Treningowy.xlsx", 
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", 
+            use_container_width=True,
+            type="primary" if is_gym_active else "secondary"
+        )
 # ZAKŁADKI GŁÓWNE
 tab1, tab2, tab_protokoly, tab3, tab4 = st.tabs(["📝 Twój Plan", "➕ Kreator", "🏥 Protokoły Kliniczne", "✨ Asystent AI", "⚙️ Baza Ćwiczeń"])
 
