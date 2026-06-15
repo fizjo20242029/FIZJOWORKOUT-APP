@@ -607,55 +607,52 @@ def generuj_excel_fizjo(liczba_dni):
 
 def generuj_excel_gym(liczba_dni):
     if not st.session_state.wylosowany_plan_cache: return None
+    
+    # --- FILTRACJA: Wyciągamy tylko ćwiczenia GYM ---
+    # To zapobiega błędowi, gdy w planie są ćwiczenia FIZJO bez 'parametry'
+    plan_gym = []
+    for kat, cw in st.session_state.wylosowany_plan_cache:
+        if kat == "NAGŁÓWEK DNIA" or kat.startswith("GYM:"):
+            plan_gym.append((kat, cw))
+            
+    if not plan_gym: return None # Jeśli nie ma ćwiczeń GYM, nie generuj nic
+
     wb = openpyxl.Workbook()
-    thin_side = Side(style='thin', color='000000')
-    medium_side = Side(style='medium', color='000000')
-    thin_border = Border(left=thin_side, right=thin_side, top=thin_side, bottom=thin_side)
+    # ... [tu zostawiasz ten sam kod co wcześniej do 'ZAKŁADKA 1: PLAN TRENINGOWY'] ...
     
-    # --- ZAKŁADKA 1: PLAN TRENINGOWY ---
-    ws_plan = wb.active
-    ws_plan.title = "PLAN TRENINGOWY"
-    fill_h = PatternFill(start_color="1F497D", end_color="1F497D", fill_type="solid")
-    font_w = Font(color="FFFFFF", bold=True)
-    
+    # WAŻNE: W pętli używaj teraz 'plan_gym' zamiast 'st.session_state.wylosowany_plan_cache'
     row_idx = 1
     dzien_idx = 1
-    for kat, cw in st.session_state.wylosowany_plan_cache:
+    for kat, cw in plan_gym: # <--- ZMIANA
         if kat == "NAGŁÓWEK DNIA":
             if row_idx > 1: row_idx += 1
             ws_plan.cell(row=row_idx, column=1, value=f"Trening {dzien_idx} - {cw['nazwa']}").font = Font(bold=True, size=14, color="007BFF")
             row_idx += 1
-            for col_idx, h in enumerate(["NR", "ĆWICZENIE", "SERIE", "POWTÓRZENIA", "TEMPO", "RIR", "PRZERWA", "Wideo"], 1):
-                c = ws_plan.cell(row=row_idx, column=col_idx, value=h)
-                c.fill = fill_h; c.font = font_w; c.border = thin_border; c.alignment = Alignment(horizontal="center")
+            # ... nagłówki ...
             row_idx += 1; ex_nr = 1; dzien_idx += 1
         else:
-            parametry_str = str(cw.get('parametry', ''))
+            # Tu używamy bezpiecznego pobierania danych
+            parametry_str = str(cw.get('parametry', '1x1'))
             if 'x' in parametry_str.lower():
                 czlon = parametry_str.replace('X', 'x').split('x', 1)
                 serie, powt = czlon[0].strip(), czlon[1].strip()
             else:
                 serie, powt = "1", parametry_str.strip()
-                
-            # Bezpieczne tworzenie komórek
-            c1 = ws_plan.cell(row=row_idx, column=1)
-            c1.value = ex_nr
-            c1.alignment = Alignment(horizontal="center")
             
-            c2 = ws_plan.cell(row=row_idx, column=2, value=cw['nazwa'])
-            c2.alignment = Alignment(wrap_text=True, vertical='center', horizontal='left')
+            # Tutaj używamy bezpiecznej inicjalizacji ex_nr
+            try:
+                ws_plan.cell(row=row_idx, column=1, value=ex_nr).alignment = Alignment(horizontal="center")
+            except: 
+                ex_nr = 1
+                ws_plan.cell(row=row_idx, column=1, value=ex_nr).alignment = Alignment(horizontal="center")
             
-            c3 = ws_plan.cell(row=row_idx, column=3, value=serie)
-            c3.alignment = Alignment(horizontal="center")
+            ws_plan.cell(row=row_idx, column=2, value=cw.get('nazwa', 'Brak'))
+            ws_plan.cell(row=row_idx, column=3, value=serie).alignment = Alignment(horizontal="center")
+            ws_plan.cell(row=row_idx, column=4, value=powt).alignment = Alignment(horizontal="center")
+            # ... reszta rysowania ...
+            row_idx += 1; ex_nr += 1
             
-            c4 = ws_plan.cell(row=row_idx, column=4, value=powt)
-            c4.alignment = Alignment(horizontal="center")
-            
-            for col_idx in range(1, 9): 
-                ws_plan.cell(row=row_idx, column=col_idx).border = thin_border
-            
-            row_idx += 1
-            ex_nr += 1
+    # --- [DZIENNIK TRENINGOWY I ANALIZA TAK SAMO JAK WCZEŚNIEJ, ALE UŻYWAJ 'plan_gym'] ---
             
     for c_letter, c_width in [('A', 5), ('C', 10), ('D', 15), ('E', 10), ('F', 10), ('G', 12), ('H', 15)]:
         ws_plan.column_dimensions[c_letter].width = c_width
