@@ -1041,13 +1041,16 @@ with st.sidebar:
         st.success("Plan gotowy!")
         st.download_button("💾 POBIERZ RAPORT DOCX", generuj_docx(), "Raport_Pacjenta.docx", use_container_width=True)
         
-        # --- INTELIGENTNY DETEKTOR TYPU PLANU ---
-        # Aplikacja sprawdza, czy stworzono plan typu "Split"
+        # --- ULEPSZONY, INTELIGENTNY DETEKTOR TYPU PLANU ---
+        # Sprawdza wielkość liter oraz obecność słowa "split" w typie i nazwie nagłówka
         czy_split = False
         for kat, cw in st.session_state.wylosowany_plan_cache:
-            if kat == "NAGŁÓWEK DNIA" and cw.get("typ") == "Split":
-                czy_split = True
-                break
+            if kat == "NAGŁÓWEK DNIA":
+                typ_planu = str(cw.get("typ", "")).lower()
+                nazwa_planu = str(cw.get("nazwa", "")).lower()
+                if "split" in typ_planu or "split" in nazwa_planu:
+                    czy_split = True
+                    break
                 
         # --- RYSOWANIE ODPOWIEDNIEGO PRZYCISKU ---
         if czy_split:
@@ -1067,7 +1070,7 @@ with st.sidebar:
                 st.download_button(
                     "📊 GENERUJ EXCEL (STANDARDOWY)", 
                     dane_fizjo, 
-                    "Plan_Kierunkowy.xlsx", 
+                    "Plan_Standardowy.xlsx", 
                     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", 
                     use_container_width=True,
                     type="primary"
