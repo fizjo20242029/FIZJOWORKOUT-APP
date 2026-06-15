@@ -73,7 +73,7 @@ BAZA_FIZJO = {
         {"nazwa": "Niedźwiedź dynamiczny", "opis": "INSTRUKCJA: Kroki w podporze niedźwiedzia.", "czas_min": 3, "parametry": "3 serie x 30 sekund", "miesnie": "Core"},
         {"nazwa": "Opuszczanie obustronne nóg", "opis": "INSTRUKCJA: Leżenie tyłem. Powoli opuszczaj obie proste nogi.", "czas_min": 2, "parametry": "3 serie x 10 powtórzeń", "miesnie": "Dół brzucha"},
         {"nazwa": "Skośne spięcia brzucha", "opis": "INSTRUKCJA: Leżenie tyłem. Kieruj ramię w stronę przeciwnego kolana.", "czas_min": 2, "parametry": "3 serie x 15 powtórzeń", "miesnie": "Skośne brzucha"},
-        {"nazwa": "Russian Twist", "opis": "INSTRUKCJA: Siad z uniesionymi stopami. Rotuj klatkę piersiową.", "czas_min": 2, "parametry": "3 serie x 20 skrętów", "miesnie": "Skośne brzucha"}
+        {"nazwa": "Russian Twist", "opis": "INSTRUKCJA: Siad z uniesionymi stopami. Rotuj klatkę piersiową.", "czas_min": 2, "parametry": "3 serie x 20 skrętów", "miesnie": "Skośne brzucha"},
         {"nazwa": "Przeprosty McKenziego (Leżenie przodem)", "opis": "INSTRUKCJA: Leżenie przodem. Dłonie na wysokości barków. Powoli prostuj łokcie, unosząc samą klatkę piersiową, miednica zostaje przyklejona do maty.", "czas_min": 2, "parametry": "3x10 powtórzeń", "miesnie": "Prostownik grzbietu"},
         
     ],
