@@ -2,6 +2,7 @@ import json
 import os
 import random
 import io
+import openpyxl
 import pandas as pd
 from docx import Document
 from docx.enum.text import WD_ALIGN_PARAGRAPH
