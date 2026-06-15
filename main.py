@@ -328,7 +328,46 @@ GLOBALNA_BAZA = {**BAZA_FIZJO, **BAZA_SILOWNIA}
 for compliance_baza in [BAZA_FIZJO, BAZA_SILOWNIA, GLOBALNA_BAZA]:
     for compliance_kat in compliance_baza:
         compliance_baza[compliance_kat] = sorted(compliance_baza[compliance_kat], key=lambda compliance_x: compliance_x['nazwa'].lower())
+# --- Wczytywanie bazy protokołów klinicznych ---
+def wczytaj_protokoly():
+    if os.path.exists("protokoly.json"):
+        try:
+            with open("protokoly.json", "r", encoding="utf-8") as f: return json.load(f)
+        except: pass
+    return {}
 
+PROTOKOLY_KLINICZNE = wczytaj_protokoly()
+
+def generuj_protokol(nazwa_choroby):
+    plan = []
+    naglowek = {"nazwa": f"PROTOKÓŁ: {nazwa_choroby}", "typ": "Kliniczny", "partie": "-", "opis": "Zestaw ułożony celowo pod jednostkę chorobową.", "czas_min": 0, "parametry": "-", "miesnie": "-", "uwagi": ""}
+    plan.append(("NAGŁÓWEK DNIA", naglowek))
+    
+    lista_cwiczen_w_chorobie = []
+    for kategoria, choroby in PROTOKOLY_KLINICZNE.items():
+        if nazwa_choroby in choroby:
+            lista_cwiczen_w_chorobie = choroby[nazwa_choroby]
+            break
+    
+    for nazwa_cw in lista_cwiczen_w_chorobie:
+        znaleziono = False
+        for kat, lista in GLOBALNA_BAZA.items():
+            for cw in lista:
+                if cw["nazwa"] == nazwa_cw:
+                    cw_kopia = cw.copy()
+                    cw_kopia["uwagi"] = ""
+                    etykieta = f"GYM: {kat}" if kat in BAZA_SILOWNIA and kat not in BAZA_FIZJO else kat
+                    plan.append((etykieta, cw_kopia))
+                    znaleziono = True
+                    break
+            if znaleziono: break
+            
+    st.session_state.wylosowany_plan_cache = plan
+    st.session_state.is_gym = False
+
+# ==============================================================================
+# LOGIKA GENERATORÓW
+# ==============================================================================
 # ==============================================================================
 # LOGIKA GENERATORÓW
 # ==============================================================================
