@@ -753,6 +753,7 @@ with st.sidebar:
 tab1, tab2, tab_protokoly, tab3, tab4 = st.tabs(["📝 Twój Plan", "➕ Kreator", "🏥 Protokoły Kliniczne", "✨ Asystent AI", "⚙️ Baza Ćwiczeń"])
 
 # ZAKŁADKA 1: WYGENEROWANY PLAN
+# ZAKŁADKA 1: WYGENEROWANY PLAN
 with tab1:
     if not st.session_state.wylosowany_plan_cache:
         st.info("👈 Użyj panelu bocznego, aby wygenerować plan lub przejdź do Kreatora.")
@@ -818,7 +819,6 @@ with tab1:
                         st.caption(f"**Anatomia:** {cw['miesnie']}")
                         st.write(cw['opis'])
                     with col2:
-                        # Zmiana układu na 4 przyciski
                         c_up, c_down, c_swap, c_del = st.columns(4)
                         moze_w_gore = abs_idx > 0 and st.session_state.wylosowany_plan_cache[abs_idx-1][0] != "NAGŁÓWEK DNIA"
                         moze_w_dol = abs_idx < len(st.session_state.wylosowany_plan_cache) - 1 and st.session_state.wylosowany_plan_cache[abs_idx+1][0] != "NAGŁÓWEK DNIA"
@@ -831,7 +831,6 @@ with tab1:
                             st.session_state.wylosowany_plan_cache[abs_idx], st.session_state.wylosowany_plan_cache[abs_idx+1] = st.session_state.wylosowany_plan_cache[abs_idx+1], st.session_state.wylosowany_plan_cache[abs_idx]
                             st.rerun()
                             
-                        # NOWY PRZYCISK: WYMIEŃ NA INNE LOSOWE (Z TEJ SAMEJ KATEGORII)
                         if c_swap.button("🔄", key=f"swap_{abs_idx}", help="Wylosuj i wstaw inne ćwiczenie z tej samej partii"):
                             czysta_kat = kat.replace("GYM: ", "").replace(" (Rozgrzewka)", "").replace(" (Wyciszenie)", "")
                             if kat == "GYM: Zakończenie":
@@ -847,7 +846,9 @@ with tab1:
                         if c_del.button("❌", key=f"del_{abs_idx}", type="primary"):
                             st.session_state.wylosowany_plan_cache.pop(abs_idx)
                             st.rerun()
-            
+                            
+                licznik += 1
+                abs_idx += 1
 
 # ZAKŁADKA 2: KREATOR MANUALNY
 with tab2:
