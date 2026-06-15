@@ -539,93 +539,81 @@ def generuj_docx():
 def generuj_excel_fizjo(liczba_dni):
     if not st.session_state.wylosowany_plan_cache: 
         return None
+        
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Plan_Standardowy"
     
-    dane_excel = [
-        ["KARTA PACJENTA / PLAN TRENINGOWY", "", "", "", "", ""],
-        ["Imię i Nazwisko:", "", "", "Data:", "", ""],
-        ["Status / Uwagi główne:", "", "", "", "", ""],
-        ["", "", "", "", "", ""]
-    ]
+    thin_border = Border(left=Side(style='thin'), right=Side(style='thin'), top=Side(style='thin'), bottom=Side(style='thin'))
+    fill_day = PatternFill(start_color="28A745", end_color="28A745", fill_type="solid")
+    fill_header = PatternFill(start_color="D4EDDA", end_color="D4EDDA", fill_type="solid")
     
-    realny_czas = sum(x[1].get('czas_min', 0) for x in st.session_state.wylosowany_plan_cache if x[0] != "NAGŁÓWEK DNIA")
-    dane_excel.append(["Całkowity szacowany czas terapii/treningu:", f"{realny_czas} min", "", "", "", ""])
-    dane_excel.append(["", "", "", "", "", ""])
+    # Nagłówek główny
+    ws.cell(row=1, column=1, value="KARTA PACJENTA / PLAN TRENINGOWY").font = Font(bold=True, size=14, color="28A745")
+    ws.cell(row=2, column=1, value="Imię i Nazwisko:")
+    ws.cell(row=2, column=4, value="Data:")
+    ws.cell(row=3, column=1, value="Status / Uwagi główne:")
     
-    czasy_dni = []
+    realny_czas = 0
     for k, c in st.session_state.wylosowany_plan_cache:
-        if k == "NAGŁÓWEK DNIA": czasy_dni.append(0)
-        else:
-            if czasy_dni: czasy_dni[-1] += c.get('czas_min', 0)
-
-    lp = 1
+        if k != "NAGŁÓWEK DNIA" and isinstance(c, dict):
+            realny_czas += c.get('czas_min', 0)
+            
+    ws.cell(row=5, column=1, value="Całkowity szacowany czas terapii/treningu:")
+    ws.cell(row=5, column=2, value=f"{realny_czas} min")
+    
+    row_idx = 7
     dzien_aktualny = 0
-    for idx, (kat, cw) in enumerate(st.session_state.wylosowany_plan_cache):
+    lp = 1
+    
+    for kat, cw in st.session_state.wylosowany_plan_cache:
         if kat == "NAGŁÓWEK DNIA":
-            if dzien_aktualny > 0: dane_excel.append(["", "", "", "", "", ""])
+            if dzien_aktualny > 0: row_idx += 1
             dzien_aktualny += 1
-            czas_tego_dnia = czasy_dni[dzien_aktualny - 1] if dzien_aktualny <= len(czasy_dni) else 0
-            dane_excel.append([f"📋 {cw.get('nazwa', '')} | Łączny czas: {czas_tego_dnia} min", "", "", "", "", ""])
-            dane_excel.append(["L.p.", "Procedura / Ćwiczenie", "Czas", "Dawkowanie / Parametry", "Anatomia / Cel", "Instrukcja wykonania"])
+            
+            # Pasek z nazwą dnia (Ciemnozielony)
+            nazwa_dnia = cw.get('nazwa', '') if isinstance(cw, dict) else str(cw)
+            ws.merge_cells(start_row=row_idx, start_column=1, end_row=row_idx, end_column=6)
+            c_day = ws.cell(row=row_idx, column=1, value=f"📋 {nazwa_dnia}")
+            c_day.font = Font(bold=True, color="FFFFFF", size=11)
+            c_day.fill = fill_day
+            for i in range(1, 7): ws.cell(row=row_idx, column=i).border = thin_border
+            row_idx += 1
+            
+            # Nagłówki tabeli (Jasnozielone)
+            naglowki = ["L.p.", "Procedura / Ćwiczenie", "Czas", "Dawkowanie / Parametry", "Anatomia / Cel", "Instrukcja wykonania"]
+            for i, nagl in enumerate(naglowki, 1):
+                c_h = ws.cell(row=row_idx, column=i, value=nagl)
+                c_h.font = Font(bold=True); c_h.fill = fill_header; c_h.border = thin_border; c_h.alignment = Alignment(horizontal="center")
+            row_idx += 1
             lp = 1
         else:
-            # Używamy .get(), aby funkcja nie wywalała się na ćwiczeniach bez opisów
-            dane_excel.append([
-                lp, 
-                cw.get('nazwa', 'Brak nazwy'), 
-                f"{cw.get('czas_min', 0)} min", 
-                cw.get('parametry', '-'), 
-                cw.get('miesnie', '-'), 
-                cw.get('opis', '-')
-            ])
-            lp += 1
+            # Wiersze z ćwiczeniami
+            if isinstance(cw, dict):
+                n_cw = cw.get('nazwa', 'Brak')
+                c_min = f"{cw.get('czas_min', 0)} min"
+                param = cw.get('parametry', '-')
+                mies = cw.get('miesnie', '-')
+                opis = cw.get('opis', '-')
+            else:
+                n_cw = str(cw); c_min = "-"; param = "-"; mies = "-"; opis = "-"
+                
+            dane_wiersza = [lp, n_cw, c_min, param, mies, opis]
+            for i, val in enumerate(dane_wiersza, 1):
+                c_d = ws.cell(row=row_idx, column=i, value=val)
+                c_d.border = thin_border
+                c_d.alignment = Alignment(wrap_text=True, vertical='top', horizontal='left' if i > 1 else 'center')
+            row_idx += 1; lp += 1
 
-    df = pd.DataFrame(dane_excel)
-    bio = io.BytesIO()
-    with pd.ExcelWriter(bio, engine='openpyxl') as writer:
-        df.to_excel(writer, index=False, header=False, sheet_name='Plan_Standardowy')
-        ws = writer.sheets['Plan_Standardowy']
-        for c_letter, c_width in [('A', 6), ('B', 35), ('C', 10), ('D', 20), ('E', 25), ('F', 60)]:
-            ws.column_dimensions[c_letter].width = c_width
+    # Szerokości kolumn dla planu standardowego
+    for c_letter, c_width in [('A', 6), ('B', 30), ('C', 10), ('D', 20), ('E', 25), ('F', 50)]:
+        ws.column_dimensions[c_letter].width = c_width
 
-        thin_border = Border(left=Side(style='thin'), right=Side(style='thin'), top=Side(style='thin'), bottom=Side(style='thin'))
-        fill_day = PatternFill(start_color="28A745", end_color="28A745", fill_type="solid")
-        fill_header = PatternFill(start_color="D4EDDA", end_color="D4EDDA", fill_type="solid")
-        
-        for r_idx, r_data in enumerate(dane_excel, 1):
-            val_a = str(r_data[0])
-            if r_idx == 1: ws.cell(row=r_idx, column=1).font = Font(bold=True, size=14, color="28A745")
-            elif val_a.startswith("📋"):
-                ws.merge_cells(start_row=r_idx, start_column=1, end_row=r_idx, end_column=6)
-                cell = ws.cell(row=r_idx, column=1)
-                cell.font = Font(bold=True, color="FFFFFF", size=11)
-                cell.fill = fill_day
-                for c_idx in range(1, 7): ws.cell(row=r_idx, column=c_idx).border = thin_border
-            elif val_a == "L.p.":
-                for c_idx in range(1, 7):
-                    cell = ws.cell(row=r_idx, column=c_idx)
-                    cell.font = Font(bold=True)
-                    cell.fill = fill_header
-                    cell.border = thin_border
-            elif val_a.isdigit():
-                for c_idx in range(1, 7):
-                    cell = ws.cell(row=r_idx, column=c_idx)
-                    cell.border = thin_border
-                    cell.alignment = Alignment(wrap_text=True, vertical='top')
-    return bio.getvalue()
+    bio = io.BytesIO(); wb.save(bio); return bio.getvalue()
 
 def generuj_excel_gym(liczba_dni):
     if not st.session_state.wylosowany_plan_cache: return None
-
-    # --- FILTRACJA: Wyciągamy tylko GYM ---
-    plan_gym = []
-    for kat, cw in st.session_state.wylosowany_plan_cache:
-        # Akceptujemy nagłówki oraz wszystko z tagiem GYM (lub ew. Rozgrzewki)
-        if kat == "NAGŁÓWEK DNIA" or kat.startswith("GYM:") or kat == "Rozgrzewka" or kat == "Zakończenie treningu":
-            plan_gym.append((kat, cw))
-
-    # Zabezpieczenie: jeśli w ogóle nie ma ćwiczeń z siłowni, zwracamy None (przycisk zniknie)
-    cwiczenia_gym_tylko = [cw for k, cw in plan_gym if k != "NAGŁÓWEK DNIA"]
-    if not cwiczenia_gym_tylko: return None
+    plan = st.session_state.wylosowany_plan_cache
 
     wb = openpyxl.Workbook()
     thin_side = Side(style='thin', color='000000')
@@ -638,21 +626,28 @@ def generuj_excel_gym(liczba_dni):
     fill_h = PatternFill(start_color="1F497D", end_color="1F497D", fill_type="solid")
     font_w = Font(color="FFFFFF", bold=True)
     
-    row_idx = 1
-    dzien_idx = 1
-    ex_nr = 1 # Inicjalizacja bezpiecznika numerowania
+    row_idx = 1; dzien_idx = 1; ex_nr = 1 
     
-    for kat, cw in plan_gym:
-        if kat == "NAGŁÓWEK DNIA":
+    for kat, cw in plan:
+        is_header = (kat == "NAGŁÓWEK DNIA")
+        if is_header:
             if row_idx > 1: row_idx += 1
-            ws_plan.cell(row=row_idx, column=1, value=f"Trening {dzien_idx} - {cw.get('nazwa', '')}").font = Font(bold=True, size=14, color="007BFF")
+            nazwa_dnia = cw.get('nazwa', f'Dzień {dzien_idx}') if isinstance(cw, dict) else str(cw)
+            ws_plan.cell(row=row_idx, column=1, value=f"Trening {dzien_idx} - {nazwa_dnia}").font = Font(bold=True, size=14, color="007BFF")
             row_idx += 1
-            for col_idx, h in enumerate(["NR", "ĆWICZENIE", "SERIE", "POWTÓRZENIA", "TEMPO", "RIR", "PRZERWA", "Wideo"], 1):
+            # NOWOŚĆ: Dodano "OPIS WYKONANIA"
+            for col_idx, h in enumerate(["NR", "ĆWICZENIE", "SERIE", "POWTÓRZENIA", "TEMPO", "RIR", "PRZERWA", "Wideo", "OPIS WYKONANIA"], 1):
                 c = ws_plan.cell(row=row_idx, column=col_idx, value=h)
                 c.fill = fill_h; c.font = font_w; c.border = thin_border; c.alignment = Alignment(horizontal="center")
             row_idx += 1; ex_nr = 1; dzien_idx += 1
         else:
-            parametry_str = str(cw.get('parametry', '1x1'))
+            if isinstance(cw, dict):
+                nazwa_cw = cw.get('nazwa', str(cw))
+                parametry_str = str(cw.get('parametry', '1x1'))
+                opis_cw = str(cw.get('opis', ''))
+            else:
+                nazwa_cw = str(cw); parametry_str = "1x1"; opis_cw = ""
+                
             if 'x' in parametry_str.lower():
                 czlon = parametry_str.replace('X', 'x').split('x', 1)
                 serie, powt = czlon[0].strip(), czlon[1].strip()
@@ -660,77 +655,65 @@ def generuj_excel_gym(liczba_dni):
                 serie, powt = "1", parametry_str.strip()
                 
             try:
-                c1 = ws_plan.cell(row=row_idx, column=1)
-                c1.value = ex_nr
-                c1.alignment = Alignment(horizontal="center")
+                c1 = ws_plan.cell(row=row_idx, column=1); c1.value = ex_nr; c1.alignment = Alignment(horizontal="center")
             except: 
-                ex_nr = 1
-                c1 = ws_plan.cell(row=row_idx, column=1)
-                c1.value = ex_nr
-                c1.alignment = Alignment(horizontal="center")
+                ex_nr = 1; c1 = ws_plan.cell(row=row_idx, column=1); c1.value = ex_nr; c1.alignment = Alignment(horizontal="center")
             
-            c2 = ws_plan.cell(row=row_idx, column=2, value=cw.get('nazwa', 'Brak'))
+            c2 = ws_plan.cell(row=row_idx, column=2, value=nazwa_cw)
             c2.alignment = Alignment(wrap_text=True, vertical='center', horizontal='left')
+            ws_plan.cell(row=row_idx, column=3, value=serie).alignment = Alignment(horizontal="center")
+            ws_plan.cell(row=row_idx, column=4, value=powt).alignment = Alignment(horizontal="center")
             
-            c3 = ws_plan.cell(row=row_idx, column=3, value=serie)
-            c3.alignment = Alignment(horizontal="center")
+            # NOWOŚĆ: Komórka z opisem
+            c9 = ws_plan.cell(row=row_idx, column=9, value=opis_cw)
+            c9.alignment = Alignment(wrap_text=True, vertical='top', horizontal='left')
             
-            c4 = ws_plan.cell(row=row_idx, column=4, value=powt)
-            c4.alignment = Alignment(horizontal="center")
-            
-            for col_idx in range(1, 9): ws_plan.cell(row=row_idx, column=col_idx).border = thin_border
+            # Obramowanie dla 9 kolumn
+            for col_idx in range(1, 10): ws_plan.cell(row=row_idx, column=col_idx).border = thin_border
             row_idx += 1; ex_nr += 1
             
-    for c_letter, c_width in [('A', 5), ('C', 10), ('D', 15), ('E', 10), ('F', 10), ('G', 12), ('H', 15)]:
+    # Szerokości kolumn (Dodano szeroką kolumnę I na opis)
+    for c_letter, c_width in [('A', 5), ('C', 10), ('D', 15), ('E', 10), ('F', 10), ('G', 12), ('H', 15), ('I', 45)]:
         ws_plan.column_dimensions[c_letter].width = c_width
-        
     max_len_plan_b = max((len(str(ws_plan.cell(row=r, column=2).value or '')) for r in range(1, row_idx)), default=30)
     ws_plan.column_dimensions['B'].width = max(30, max_len_plan_b + 3)
 
-    # --- ZAKŁADKA 2: DZIENNIK TRENINGOWY (Cały Rok - 52 tyg) ---
+    # --- ZAKŁADKA 2: DZIENNIK TRENINGOWY ---
     ws_dz = wb.create_sheet("DZIENNIK TRENINGOWY")
     for w in range(52):
         start_col = 3 + w*18
         ws_dz.merge_cells(start_row=1, start_column=start_col, end_row=1, end_column=start_col+17)
         c = ws_dz.cell(row=1, column=start_col, value=f"Tydzień {w+1}")
-        c.alignment = Alignment(horizontal="center", vertical="center")
-        c.fill = PatternFill(start_color="CCE5FF", end_color="CCE5FF", fill_type="solid")
-        c.font = Font(bold=True)
+        c.alignment = Alignment(horizontal="center", vertical="center"); c.fill = PatternFill(start_color="CCE5FF", end_color="CCE5FF", fill_type="solid"); c.font = Font(bold=True)
         for s in range(6):
             s_col = start_col + s*3
             ws_dz.merge_cells(start_row=2, start_column=s_col, end_row=2, end_column=s_col+2)
             c2 = ws_dz.cell(row=2, column=s_col, value=f"SERIA {s+1}")
-            c2.alignment = Alignment(horizontal="center", vertical="center")
-            c2.fill = PatternFill(start_color="E6F2FF", end_color="E6F2FF", fill_type="solid")
-            c2.font = Font(bold=True)
+            c2.alignment = Alignment(horizontal="center", vertical="center"); c2.fill = PatternFill(start_color="E6F2FF", end_color="E6F2FF", fill_type="solid"); c2.font = Font(bold=True)
             for idx_h, val_h in enumerate(["CIĘŻAR", "POWT.", "RIR"]):
-                c3 = ws_dz.cell(row=3, column=s_col+idx_h, value=val_h)
-                c3.alignment = Alignment(horizontal="center")
-                c3.font = Font(bold=True)
+                c3 = ws_dz.cell(row=3, column=s_col+idx_h, value=val_h); c3.alignment = Alignment(horizontal="center"); c3.font = Font(bold=True)
                 ws_dz.column_dimensions[get_column_letter(s_col+idx_h)].width = 9
 
-    ws_dz.column_dimensions['A'].width = 12
-    ws_dz.cell(row=3, column=1, value="KOLEJNOŚĆ").font = Font(bold=True)
-    ws_dz.cell(row=3, column=2, value="ĆWICZENIE").font = Font(bold=True)
+    ws_dz.column_dimensions['A'].width = 12; ws_dz.cell(row=3, column=1, value="KOLEJNOŚĆ").font = Font(bold=True); ws_dz.cell(row=3, column=2, value="ĆWICZENIE").font = Font(bold=True)
     
     r_dz = 4; ex_nr = 1; dzien_idx = 1; analiza_data = []
-    for kat, cw in plan_gym:
+    for kat, cw in plan:
         if kat == "NAGŁÓWEK DNIA":
             if r_dz > 4: r_dz += 1
+            nazwa_dnia = cw.get('nazwa', f'Dzień {dzien_idx}') if isinstance(cw, dict) else str(cw)
             ws_dz.merge_cells(start_row=r_dz, start_column=1, end_row=r_dz, end_column=2)
-            c = ws_dz.cell(row=r_dz, column=1, value=f"DZIEŃ {dzien_idx} - {cw.get('nazwa', '')}")
-            c.font = Font(bold=True, color="FFFFFF")
-            c.fill = PatternFill(start_color="007BFF", end_color="007BFF", fill_type="solid")
+            c = ws_dz.cell(row=r_dz, column=1, value=f"DZIEŃ {dzien_idx} - {nazwa_dnia}")
+            c.font = Font(bold=True, color="FFFFFF"); c.fill = PatternFill(start_color="007BFF", end_color="007BFF", fill_type="solid")
             c.alignment = Alignment(horizontal="left", vertical="center")
             r_dz += 1; ex_nr = 1; dzien_idx += 1
         else:
+            nazwa_cw = cw.get('nazwa', str(cw)) if isinstance(cw, dict) else str(cw)
             ws_dz.cell(row=r_dz, column=1, value=ex_nr).alignment = Alignment(horizontal="center")
-            ws_dz.cell(row=r_dz, column=2, value=cw.get('nazwa', 'Brak'))
-            analiza_data.append((cw.get('nazwa', 'Brak'), r_dz)); r_dz += 1; ex_nr += 1
+            ws_dz.cell(row=r_dz, column=2, value=nazwa_cw)
+            analiza_data.append((nazwa_cw, r_dz)); r_dz += 1; ex_nr += 1
 
     max_col_dz = 2 + 52 * 18
     ostatni_wiersz_siatki = max(100, r_dz + 15)
-    
     for row in range(1, ostatni_wiersz_siatki + 1):
         for col in range(1, max_col_dz + 1):
             cell = ws_dz.cell(row=row, column=col)
@@ -742,8 +725,7 @@ def generuj_excel_gym(liczba_dni):
                 if (col - 2) % 18 == 0: b_right = medium_side
             if row == 3: b_bottom = medium_side
             cell.border = Border(left=b_left, right=b_right, top=b_top, bottom=b_bottom)
-            if col == 2 and row >= 4:
-                cell.alignment = Alignment(wrap_text=True, vertical='center', horizontal='left')
+            if col == 2 and row >= 4: cell.alignment = Alignment(wrap_text=True, vertical='center', horizontal='left')
 
     max_len_dz_b = max((len(str(ws_dz.cell(row=r, column=2).value or '')) for r in range(4, r_dz)), default=30)
     ws_dz.column_dimensions['B'].width = max(30, max_len_dz_b + 3)
@@ -763,7 +745,6 @@ def generuj_excel_gym(liczba_dni):
     c.alignment = Alignment(horizontal="center", vertical="center"); c.fill = fill_h; c.font = font_w; c.border = thin_border
     
     for w in range(52): set_block(2 + w*3, f"Tydzień {w+1}", ["Max Ciężar", "Suma Powt.", "Zrealiz. Serie"], "E6F2FF")
-    
     c_off = 2 + 52*3
     mw = [list(range(0,4)), list(range(4,8)), list(range(8,13)), list(range(13,17)), list(range(17,21)), list(range(21,26)), list(range(26,30)), list(range(30,34)), list(range(34,39)), list(range(39,43)), list(range(43,47)), list(range(47,52))]
     for m in range(12): set_block(c_off + m*3, f"Miesiąc {m+1}", ["Śr. Max Ciężar", "Suma Powt.", "Suma Serii"], "CCE5FF")
@@ -782,7 +763,6 @@ def generuj_excel_gym(liczba_dni):
             ws_an.cell(row=r_an, column=2+w*3, value=f'=IF(COUNT({",".join(w_cells)})>0, MAX({",".join(w_cells)}), "")').border = thin_border
             ws_an.cell(row=r_an, column=2+w*3+1, value=f'=IF(SUM({",".join(p_cells)})>0, SUM({",".join(p_cells)}), "")').border = thin_border
             ws_an.cell(row=r_an, column=2+w*3+2, value=f'=IF(COUNT({",".join(w_cells)})>0, COUNT({",".join(w_cells)}), "")').border = thin_border
-        
         def app_agg(cb, weeks):
             mx_c = [f"{get_column_letter(2 + w*3)}{r_an}" for w in weeks]
             pt_c = [f"{get_column_letter(2 + w*3 + 1)}{r_an}" for w in weeks]
@@ -790,7 +770,6 @@ def generuj_excel_gym(liczba_dni):
             ws_an.cell(row=r_an, column=cb, value=f'=IF(COUNT({",".join(mx_c)})>0, ROUND(AVERAGE({",".join(mx_c)}), 1), "")').border = thin_border
             ws_an.cell(row=r_an, column=cb+1, value=f'=IF(SUM({",".join(pt_c)})>0, SUM({",".join(pt_c)}), "")').border = thin_border
             ws_an.cell(row=r_an, column=cb+2, value=f'=IF(SUM({",".join(sr_c)})>0, SUM({",".join(sr_c)}), "")').border = thin_border
-            
         c_off = 158
         for m in range(12): app_agg(c_off + m*3, mw[m])
         c_off += 36
@@ -1043,52 +1022,42 @@ with st.sidebar:
         
         # --- ULTIMATE DETEKTOR TYPU PLANU ---
         czy_split = False
+        slowa_kluczowe = ["split", "spit", "dni tygodnia", "poniedziałek", "wtorek", "środa", "czwartek", "piątek", "sobota", "niedziela"]
         
-        # Definiujemy wszystkie słowa kluczowe, które zdradzają, że to plan typu Split
-        slowa_kluczowe = [
-            "split", "spit", "dni tygodnia", 
-            "poniedziałek", "wtorek", "środa", "czwartek", "piątek", "sobota", "niedziela"
-        ]
-        
-        # 1. Sprawdzamy wygenerowany plan (szukamy w nazwach nagłówków i ćwiczeń)
-        for kat, cw in st.session_state.wylosowany_plan_cache:
-            tekst_elementu = str(kat).lower() + " " + str(cw).lower()
-            if any(slowo in tekst_elementu for slowo in slowa_kluczowe):
+        for element in st.session_state.wylosowany_plan_cache:
+            if any(slowo in str(element).lower() for slowo in slowa_kluczowe):
                 czy_split = True
                 break
                 
-        # 2. Sprawdzamy cały stan aplikacji (zamieniając absolutnie wszystko na tekst, by złapać listy i krotki)
         if not czy_split:
             for klucz, wartosc in st.session_state.items():
-                if klucz != "wylosowany_plan_cache":
-                    wartosc_str = str(wartosc).lower()
-                    if any(slowo in wartosc_str for slowo in slowa_kluczowe):
-                        czy_split = True
-                        break
+                if klucz != "wylosowany_plan_cache" and any(slowo in str(wartosc).lower() for slowo in slowa_kluczowe):
+                    czy_split = True
+                    break
                         
-        # --- RYSOWANIE ODPOWIEDNIEGO PRZYCISKU ---
+        # --- RYSOWANIE PRZYCISKÓW Z WYKRYWANIEM AWARII ---
+        import traceback
+        
         if czy_split:
-            dane_gym = generuj_excel_gym(dni)
-            if dane_gym:
-                st.download_button(
-                    "🏋️‍♂️ GENERUJ EXCEL (DZIENNIK 52 TYG)", 
-                    dane_gym, 
-                    "Dziennik_Treningowy_Split.xlsx", 
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", 
-                    use_container_width=True,
-                    type="primary"
-                )
+            try:
+                dane_gym = generuj_excel_gym(dni)
+                if dane_gym:
+                    st.download_button("🏋️‍♂️ GENERUJ EXCEL (DZIENNIK 52 TYG)", dane_gym, "Dziennik_Treningowy_Split.xlsx", 
+                                       mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", 
+                                       use_container_width=True, type="primary")
+            except Exception as e:
+                st.error(f"Błąd Excel GYM: {e}")
+                st.code(traceback.format_exc())
         else:
-            dane_fizjo = generuj_excel_fizjo(dni)
-            if dane_fizjo:
-                st.download_button(
-                    "📊 GENERUJ EXCEL (STANDARDOWY)", 
-                    dane_fizjo, 
-                    "Plan_Standardowy.xlsx", 
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", 
-                    use_container_width=True,
-                    type="primary"
-                )
+            try:
+                dane_fizjo = generuj_excel_fizjo(dni)
+                if dane_fizjo:
+                    st.download_button("📊 GENERUJ EXCEL (STANDARDOWY)", dane_fizjo, "Plan_Standardowy.xlsx", 
+                                       mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", 
+                                       use_container_width=True, type="primary")
+            except Exception as e:
+                st.error(f"Błąd Excel FIZJO: {e}")
+                st.code(traceback.format_exc())
 # ZAKŁADKI GŁÓWNE
 tab1, tab2, tab_protokoly, tab3, tab4 = st.tabs(["📝 Twój Plan", "➕ Kreator", "🏥 Protokoły Kliniczne", "✨ Asystent AI", "⚙️ Baza Ćwiczeń"])
 
