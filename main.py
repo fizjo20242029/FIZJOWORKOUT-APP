@@ -646,16 +646,7 @@ with st.sidebar:
         
     if st.button("❌ CZYŚĆ EKRAN (RESET)", use_container_width=True):
         st.session_state.wylosowany_plan_cache = []
-        st.rerun()
-    st.divider()
-    st.header("🏥 Protokoły Kliniczne")
-    if PROTOKOLY_KLINICZNE:
-        wybrana_choroba = st.selectbox("Wybierz schorzenie:", list(PROTOKOLY_KLINICZNE.keys()))
-        if st.button("⚕️ GENERUJ PROTOKÓŁ", use_container_width=True):
-            generuj_protokol(wybrana_choroba)
-            st.rerun()
-    else:
-        st.caption("Brak pliku protokoly.json")    
+        st.rerun()    
         
     st.divider()
     if st.session_state.wylosowany_plan_cache:
@@ -665,7 +656,7 @@ with st.sidebar:
         st.download_button("📊 POBIERZ EXCEL", generuj_excel(dni), "Plan_Treningowy.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
 
 # ZAKŁADKI GŁÓWNE
-tab1, tab2, tab3, tab4 = st.tabs(["📝 Twój Plan", "➕ Kreator", "✨ Asystent AI", "⚙️ Baza Ćwiczeń"])
+tab1, tab2, tab_protokoly, tab3, tab4 = st.tabs(["📝 Twój Plan", "➕ Kreator", "🏥 Protokoły Kliniczne", "✨ Asystent AI", "⚙️ Baza Ćwiczeń"])
 
 # ZAKŁADKA 1: WYGENEROWANY PLAN
 with tab1:
@@ -793,7 +784,18 @@ with tab2:
                 if c2.button("Dodaj", key=f"bg_{cw['nazwa']}"):
                     st.session_state.wylosowany_plan_cache.append((f"GYM: {kat_wyb_g}", cw.copy()))
                     st.toast("Dodano!")
-
+# NOWA ZAKŁADKA: PROTOKOŁY KLINICZNE (PANEL GŁÓWNY)
+with tab_protokoly:
+    st.subheader("🏥 Gotowe Protokoły Kliniczne")
+    st.markdown("Wybierz jednostkę chorobową z listy, aby automatycznie załadować zaprogramowany zestaw ćwiczeń rehabilitacyjnych bezpośrednio do zakładki **Twój Plan**.")
+    
+    if PROTOKOLY_KLINICZNE:
+        wybrana_choroba = st.selectbox("Wybierz schorzenie z bazy:", list(PROTOKOLY_KLINICZNE.keys()), key="main_panel_proto")
+        if st.button("⚕️ URUCHOM PROTOKÓŁ REHABILITACYJNY", use_container_width=True, type="primary"):
+            generuj_protokol(wybrana_choroba)
+            st.rerun()
+    else:
+        st.error("Brak pliku `protokoly.json` w katalogu aplikacji. Utwórz plik, aby aktywować bazę kliniczną.")
 # ZAKŁADKA 3: CZAT AI GROQ
 with tab3:
     st.subheader("Wirtualny Konsultant Treningowy")
