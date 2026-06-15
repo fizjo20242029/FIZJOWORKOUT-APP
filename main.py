@@ -789,12 +789,13 @@ st.title("Fizjo Workout Ultimate")
 st.markdown("Zintegrowane środowisko projektowania programów treningowych.")
 
 # Kod stylizujący pływający przycisk "Wróć na górę"
+# Kod stylizujący pływający przycisk "Wróć na górę" (Lewa strona)
 st.markdown("""
 <style>
 .back-to-top {
     position: fixed;
     bottom: 20px;
-    right: 20px;
+    left: 20px; /* Zmieniono z right na left */
     background-color: #28a745;
     color: white;
     border-radius: 50%;
