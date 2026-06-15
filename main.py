@@ -555,7 +555,8 @@ st.markdown("Zintegrowane środowisko projektowania programów treningowych.")
 
 with st.sidebar:
     st.header("🔑 Dostęp do AI")
-    user_api_key = st.text_input("Twój klucz API Groq:", type="password")
+    user_api_key = st.text_input("Twój klucz API Groq:", type="password", help="Pobierz darmowy klucz ze strony console.groq.com")
+    st.caption("Nie masz klucza? Pobierz go bezpłatnie ze strony: [console.groq.com](https://console.groq.com/)")
     groq_client = Groq(api_key=user_api_key) if user_api_key else None
 
     st.divider()
@@ -751,7 +752,7 @@ with tab2:
 
 # ZAKŁADKA 3: CZAT AI GROQ
 with tab3:
-    st.subheader("Wirtualny Konsultant Treningowy (Llama 3)")
+    st.subheader("Wirtualny Konsultant Treningowy")
     if not groq_client:
         st.info("👈 Wklej klucz w panelu bocznym.")
     else:
