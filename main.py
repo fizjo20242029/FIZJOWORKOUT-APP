@@ -84,6 +84,7 @@ BAZA_FIZJO = {
         {"nazwa": "PIR mięśnia piersiowego większego", "opis": "INSTRUKCJA: Leżenie tyłem na brzegu kozetki, ręka zwisa. Lekko naciskaj ręką w górę przeciw oporowi (20% siły) przez 8s. Rozluźnij z wydechem i pozwól ręce opaść niżej.", "czas_min": 3, "parametry": "4 cykle na stronę", "miesnie": "Piersiowy większy"},
     
     ],
+    
     "Core (Tułów)": [
         {"nazwa": "Plank (Podpór przodem)", "opis": "INSTRUKCJA: Oprzyj się na przedramionach i palcach stóp. Ciało w linii prostej.", "czas_min": 3, "parametry": "3 serie x 30 sekund", "miesnie": "Core"},
         {"nazwa": "Side Plank (Podpór bokiem)", "opis": "INSTRUKCJA: Leżenie na boku, podparcie na przedramieniu. Unieś biodra.", "czas_min": 3, "parametry": "2 serie x 20 sekund na stronę", "miesnie": "Skośne brzucha"},
