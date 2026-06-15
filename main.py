@@ -55,6 +55,8 @@ BAZA_FIZJO = {
         {"nazwa": "PIR mięśnia dźwigacza łopatki", "opis": "INSTRUKCJA: Głowa zgięta o 45 stopni i pochylona w stronę pachy. Zastosuj technikę napięcie-rozluźnienie-pogłębienie (jak w klasycznym PIR).", "czas_min": 3, "parametry": "3-5 powtórzeń na stronę", "miesnie": "Dźwigacz łopatki"},
         {"nazwa": "Autotrakcja szyi na ręczniku", "opis": "INSTRUKCJA: Owiń zrolowany ręcznik wokół potylicy, chwyć końce dłońmi. Pociągnij ręcznik do przodu i lekko w górę, wykonując delikatny wyprost szyi na stworzonym punkcie podparcia.", "czas_min": 2, "parametry": "10 powtórzeń", "miesnie": "Przestrzenie międzykręgowe szyjne"},
         {"nazwa": "Aktywacja głębokich zginaczy (Janda)", "opis": "INSTRUKCJA: Leżenie tyłem, głowa na płasko. Wykonaj sam ruch potakiwania (przyciągnięcie brody do krtani) bez odrywania tyłu głowy od kozetki.", "czas_min": 2, "parametry": "3x10 sekund", "miesnie": "Głębokie zginacze szyi (longus colli)"},
+        {"nazwa": "Rozciąganie mięśnia mostkowo-obojczykowo-sutkowego (MOS)", "opis": "INSTRUKCJA: Jedną ręką ustabilizuj obojczyk. Odchyl głowę w tył, zrotuj w stronę przeciwną i wykonaj skłon do boku. Poczujesz ciągnięcie z przodu szyi.", "czas_min": 2, "parametry": "3x30 sekund na stronę", "miesnie": "Mięsień MOS, pochyłe"},
+        {"nazwa": "Izometria szyi z piłką overball", "opis": "INSTRUKCJA: Umieść miękką piłkę między czołem a ścianą. Naciskaj na nią głową, utrzymując izometryczne napięcie mięśni bez ruchu w stawach.", "czas_min": 2, "parametry": "3x10 sekund (w każdą stronę)", "miesnie": "Globalne stabilizatory szyi"},
         
     ],
     "Kończyna górna": [
@@ -76,7 +78,11 @@ BAZA_FIZJO = {
         {"nazwa": "Izometria rotacji z piłką o ścianę", "opis": "INSTRUKCJA: Stojąc bokiem do ściany, łokieć ugięty 90st. Przyciśnij małą piłkę do ściany grzbietem dłoni (rotacja zew.) i pchaj z 30% siły bez ruchu.", "czas_min": 2, "parametry": "3x8 sekund", "miesnie": "Stożek rotatorów"},
         {"nazwa": "Wzorzec PNF (D1 Zgięcie) z taśmą", "opis": "INSTRUKCJA: Stań na gumie. Chwyć ją po przekątnej i prowadź ramię od wyprostu/rotacji wewn. (przy przeciwległym biodrze) do pełnego zgięcia/rotacji zewn. nad głową.", "czas_min": 3, "parametry": "3x10 powtórzeń", "miesnie": "Łańcuch kinematyczny kończyny górnej"},
         {"nazwa": "Automasaż rozcięgna dłoniowego piłeczką", "opis": "INSTRUKCJA: Oprzyj dłoń na twardej piłeczce (np. golfowej/lacrosse). Wykonuj powolne, dogniatające ruchy rolowania po całej wewnętrznej powierzchni dłoni.", "czas_min": 2, "parametry": "2 minuty na stronę", "miesnie": "Rozcięgno dłoniowe, zginacze palców"},
-        
+        {"nazwa": "Ślizg nerwu promieniowego", "opis": "INSTRUKCJA: Stojąc, opuść bark. Ramię wyprostowane, zrotowane do wewnątrz (kciuk w stronę uda), nadgarstek zgięty dłoniowo. Pochylaj głowę w stronę przeciwną odciągając ramię w tył.", "czas_min": 2, "parametry": "15 powtórzeń na stronę", "miesnie": "Nerw promieniowy"},
+        {"nazwa": "Ślizg nerwu łokciowego", "opis": "INSTRUKCJA: 'Maska Batmana'. Ramię odwiedzione do 90st. Zegnij łokieć i nadgarstek, próbując przyłożyć dłoń do oka/ucha jak maskę. Jednocześnie pochyl głowę w przeciwną stronę.", "czas_min": 2, "parametry": "15 powtórzeń na stronę", "miesnie": "Nerw łokciowy"},
+        {"nazwa": "Rozciąganie w futrynie drzwi (Piersiowy)", "opis": "INSTRUKCJA: Oprzyj przedramiona na futrynie drzwi (łokcie na wys. barków lub wyżej). Wykonaj powolny wykrok jedną nogą w przód, rozciągając klatkę piersiową.", "czas_min": 2, "parametry": "3x30 sekund", "miesnie": "Piersiowy większy i mniejszy"},
+        {"nazwa": "PIR mięśnia piersiowego większego", "opis": "INSTRUKCJA: Leżenie tyłem na brzegu kozetki, ręka zwisa. Lekko naciskaj ręką w górę przeciw oporowi (20% siły) przez 8s. Rozluźnij z wydechem i pozwól ręce opaść niżej.", "czas_min": 3, "parametry": "4 cykle na stronę", "miesnie": "Piersiowy większy"},
+    
     ],
     "Core (Tułów)": [
         {"nazwa": "Plank (Podpór przodem)", "opis": "INSTRUKCJA: Oprzyj się na przedramionach i palcach stóp. Ciało w linii prostej.", "czas_min": 3, "parametry": "3 serie x 30 sekund", "miesnie": "Core"},
@@ -96,6 +102,10 @@ BAZA_FIZJO = {
         {"nazwa": "Pozycja odciążająca (Trakcja 90/90)", "opis": "INSTRUKCJA: Leżenie tyłem, podudzia oparte na krześle lub dużej piłce (kąty 90st w biodrach i kolanach). Oddychaj głęboko do brzucha.", "czas_min": 5, "parametry": "5-10 minut", "miesnie": "Odbarczenie krążków międzykręgowych L-S"},
         {"nazwa": "PIR mięśnia czworobocznego lędźwi (QL)", "opis": "INSTRUKCJA: Leżenie na boku zdrowym na wałku, chora noga zwisa poza kozetkę. Izometryczne uniesienie miednicy w górę (5s), rozluźnienie i opadnięcie nogi grawitacyjnie w dół.", "czas_min": 3, "parametry": "4 cykle", "miesnie": "Czworoboczny lędźwi (QL)"},
         {"nazwa": "Rolowanie klatki piersiowej na wałku", "opis": "INSTRUKCJA: Leżenie tyłem na wałku (wałek w poprzek kręgosłupa piersiowego). Ręce za głową, wykonuj delikatne wyprosty odcinka piersiowego przez wałek.", "czas_min": 2, "parametry": "2 minuty", "miesnie": "Prostownik grzbietu piersiowy, stawy międzykręgowe"},
+        {"nazwa": "Mobilizacja przepony (automasaż)", "opis": "INSTRUKCJA: W leżeniu tyłem, zegnij kolana. Wsuń delikatnie opuszki palców pod dolne żebra. Na wydechu delikatnie masuj i rozluźniaj tkanki pod łukiem żebrowym.", "czas_min": 3, "parametry": "3 minuty", "miesnie": "Przepona"},
+        {"nazwa": "Rotacje lędźwiowe w leżeniu tyłem", "opis": "INSTRUKCJA: Leżenie tyłem, ręce szeroko na boki. Kolana zgięte i złączone. Powoli opuszczaj złączone kolana raz na lewą, raz na prawą stronę, nie odrywając łopatek.", "czas_min": 3, "parametry": "20 powtórzeń", "miesnie": "Mięśnie skośne brzucha, rotatory lędźwiowe"},
+        {"nazwa": "Pozycja ukłonu japońskiego (Child's pose)", "opis": "INSTRUKCJA: Siad na piętach. Wyciągnij ramiona daleko w przód po macie, czoło oprzyj na podłodze. Rozluźnij całkowicie dolny odcinek pleców.", "czas_min": 2, "parametry": "2 minuty", "miesnie": "Prostownik grzbietu (rozciąganie)"},
+        {"nazwa": "Wzmacnianie wielodzielnego (Cofanie miednicy)", "opis": "INSTRUKCJA: Klęk podparty. Wykonaj bardzo delikatny ruch cofnięcia miednicy (tyłopochylenie) wykorzystując głębokie mięśnie przykręgosłupowe. Ruch jest mikroskopijny.", "czas_min": 2, "parametry": "3x15 powtórzeń", "miesnie": "Mięsień wielodzielny (multifidus)"},
         
     ],
     "Kończyna dolna": [
@@ -122,7 +132,18 @@ BAZA_FIZJO = {
         {"nazwa": "Nordic Hamstring Curl (Ekscentryka)", "opis": "INSTRUKCJA: Klęk, terapeuta (lub drabinka) blokuje stopy. Bardzo powoli opadaj tułowiem w przód, hamując ruch wyłącznie tyłem ud, aż oprzesz się na rękach.", "czas_min": 3, "parametry": "3x5 powtórzeń", "miesnie": "Grupa kulszowo-goleniowa (ekscentryka)"},
         {"nazwa": "Zbieranie ręcznika palcami stóp", "opis": "INSTRUKCJA: W siadzie. Ułóż ręcznik na podłodze, postaw na nim stopy. Chwytaj palcami stóp materiał i podwijaj pod siebie.", "czas_min": 2, "parametry": "2 minuty", "miesnie": "Zginacze palców, rozcięgno podeszwowe"},
         {"nazwa": "Hip Airplanes (Samoloty)", "opis": "INSTRUKCJA: W opadzie tułowia na jednej nodze (pozycja jaskółki). Wykonuj rotację miednicy na zewnątrz (otwieranie biodra) i do wewnątrz (zamykanie).", "czas_min": 3, "parametry": "3x8 powtórzeń na nogę", "miesnie": "Rotatory biodra, stabilizatory miednicy"}
+        {"nazwa": "Ślizg nerwu strzałkowego", "opis": "INSTRUKCJA: W leżeniu lub siadzie, noga ugięta. Wykonaj zgięcie podeszwowe stopy (obciągnięcie palców) z jednoczesną inwersją stopy do wewnątrz, połączone ze zgięciem szyi.", "czas_min": 2, "parametry": "15 powtórzeń na stronę", "miesnie": "Nerw strzałkowy"},
+        {"nazwa": "PIR mięśnia prostego uda", "opis": "INSTRUKCJA: Leżenie przodem. Zegnij kolano. Naciskaj stopą w dół na rękę stawiającą opór (5s). Rozluźnij i dociągnij piętę bliżej pośladka.", "czas_min": 3, "parametry": "4 cykle na nogę", "miesnie": "Prosty uda"},
+        {"nazwa": "Rolowanie pasma biodrowo-piszczelowego (ITB)", "opis": "INSTRUKCJA: Podpór bokiem na przedramieniu z wałkiem pod udem. Powoli roluj zewnętrzną część uda od biodra aż nad kolano. Unikaj rolowania samych stawów.", "czas_min": 3, "parametry": "2 minuty na stronę", "miesnie": "Pasmo biodrowo-piszczelowe (ITB), TFL"},
+        {"nazwa": "Korekcja miednicy (Drop pelvis)", "opis": "INSTRUKCJA: Stań jedną nogą na stepie/schodku, druga noga zwisa. Kontrolowanie opuszczaj zwisającą nogę (biodro opada) i unoś z powrotem aktywując pośladek nogi podporowej.", "czas_min": 3, "parametry": "3x12 powtórzeń na nogę", "miesnie": "Pośladkowy średni, stabilizacja miednicy"},
         
+    ]
+
+    "Neurologia i Koordynacja": [
+        {"nazwa": "Ćwiczenia Frenkla (Ślizganie piętą)", "opis": "INSTRUKCJA: Leżenie tyłem. Ze wzrokową kontrolą ruchu powoli przesuwaj piętę jednej nogi wzdłuż piszczeli drugiej nogi, od kostki aż do kolana i z powrotem.", "czas_min": 3, "parametry": "10 powtórzeń na nogę", "miesnie": "Koordynacja, propriocepcja, układ nerwowy"},
+        {"nazwa": "Przetaczanie tułowia (wzorce rotacyjne)", "opis": "INSTRUKCJA: Leżenie tyłem. Zainicjuj obrót na bok poprzez sięgnięcie samą ręką (góra ciała) w bok, miednica podąża za ruchem z opóźnieniem.", "czas_min": 3, "parametry": "10 przetoczeń na stronę", "miesnie": "Taśmy skośne, integracja odruchów"},
+        {"nazwa": "PNF - Wzorzec miednicy (Elewacja przednia)", "opis": "INSTRUKCJA: Leżenie na boku. Pociągnij miednicę w górę i w przód (kierunek do pępka) pokonując opór terapeuty lub taśmy.", "czas_min": 2, "parametry": "3x10 powtórzeń", "miesnie": "Mięśnie tułowia, skośne brzucha, QL"},
+        {"nazwa": "Trening dwuzadaniowy (Dual-tasking)", "opis": "INSTRUKCJA: Wykonuj proste ćwiczenie ruchowe (np. maszerowanie w miejscu lub odbijanie balonu) z jednoczesnym zadaniem poznawczym (np. liczenie w tył od 100 co 7).", "czas_min": 5, "parametry": "5 minut", "miesnie": "Neuroplastyczność mózgu"}
     ]
 }
 
