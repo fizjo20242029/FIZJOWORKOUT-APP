@@ -370,9 +370,6 @@ def generuj_protokol(nazwa_choroby):
 # ==============================================================================
 # LOGIKA GENERATORÓW
 # ==============================================================================
-# ==============================================================================
-# LOGIKA GENERATORÓW
-# ==============================================================================
 def generuj_plan(profil, budzet, dni):
     plan = []
     b_fizjo = {k: list(v) for k, v in BAZA_FIZJO.items()}
@@ -978,7 +975,7 @@ def generuj_excel_gym(liczba_dni):
 # UI - INTERFEJS STRONY WEBOWEJ
 # ==============================================================================
 st.markdown('<div id="poczatek-strony"></div>', unsafe_allow_html=True)
-st.title("Fizjo Workout Ultimate")
+st.title("Fizjo Workout Ultimate K.T.")
 st.markdown("Zintegrowane środowisko projektowania programów treningowych.")
 
 # Kod stylizujący pływający przycisk "Wróć na górę"
