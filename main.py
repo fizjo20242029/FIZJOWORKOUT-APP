@@ -253,7 +253,7 @@ PLIK_WLASNYCH_CWICZEN = "wlasne_cwiczenia.json"
 def zaladuj_wlasne_cwiczenia():
     if os.path.exists(PLIK_WLASNYCH_CWICZEN):
         try:
-            with open(PLIK_WLASNYCH_CWICZEN, "r", encoding="utf-8") as f:
+            with open(PLIK_WLASNYCH_CWICZEN, "r") as f:
                 dane = json.load(f)
                 for kat, lista in dane.get("FIZJO", {}).items():
                     if kat in BAZA_FIZJO: BAZA_FIZJO[kat].extend(lista)
@@ -264,14 +264,11 @@ def zaladuj_wlasne_cwiczenia():
 zaladuj_wlasne_cwiczenia()
 GLOBALNA_BAZA = {**BAZA_FIZJO, **BAZA_SILOWNIA}
 
-# --- NOWOŚĆ: AUTOMATYCZNE SORTOWANIE ALFABETYCZNE BAZ (PKT 7) ---
-for baza in [BAZA_FIZJO, BAZA_SILOWNIA, GLOBALNA_BAZA]:
-    for kat in baza:
-        baza[kat] = sorted(baza[kat], key=lambda x: x['nazwa'].lower())
+# AUTOMATYCZNE SORTOWANIE ALFABETYCZNE BAZ
+for compliance_baza in [BAZA_FIZJO, BAZA_SILOWNIA, GLOBALNA_BAZA]:
+    for compliance_kat in compliance_baza:
+        compliance_baza[compliance_kat] = sorted(compliance_baza[compliance_kat], key=lambda compliance_x: compliance_x['nazwa'].lower())
 
-# ==============================================================================
-# LOGIKA GENERATORÓW
-# ==============================================================================
 # ==============================================================================
 # LOGIKA GENERATORÓW
 # ==============================================================================
@@ -307,7 +304,6 @@ def generuj_plan(profil, budzet, dni):
                 7: [["Klatka piersiowa"], ["Plecy"], ["Nogi"], ["Ręce"], ["Pośladki"], ["Klatka piersiowa"], ["Plecy", "Nogi"]]
             }
         else:
-            # Uklady podziału dla fizjoterapii (pomija 'Oddechowe' - to jest auto-rozgrzewka)
             uklady = {
                 1: [["Głowa/Szyja", "Kończyna górna", "Core (Tułów)", "Kończyna dolna"]],
                 2: [["Kończyna górna", "Głowa/Szyja"], ["Kończyna dolna", "Core (Tułów)"]],
@@ -320,7 +316,6 @@ def generuj_plan(profil, budzet, dni):
         plan_na_dni = uklady.get(rzeczywista_liczba_dni, uklady[7][:rzeczywista_liczba_dni])
 
     for i in range(rzeczywista_liczba_dni):
-        # 1. GENEROWANIE NAGŁÓWKA DNIA Z PAMIĘCIĄ PARTII (DLA AUTO-ZMIANY NAZWY)
         if czy_wielo_dniowy:
             if czy_split:
                 dzien = dni_tygodnia[i]
@@ -333,7 +328,6 @@ def generuj_plan(profil, budzet, dni):
                 naglowek = {"nazwa": nazwa_dnia, "typ": "Kompleksowy", "partie": "", "opis": "", "czas_min": 0, "parametry": "-", "miesnie": "-", "uwagi": ""}
             plan.append(("NAGŁÓWEK DNIA", naglowek))
 
-        # 2. OBOWIĄZKOWA ROZGRZEWKA / ODDECH
         if is_gym:
             cw_start = pop_random(b_gym, "Rozgrzewka") or random.choice(BAZA_SILOWNIA["Rozgrzewka"]).copy()
             cw_start["uwagi"] = ""
@@ -345,7 +339,6 @@ def generuj_plan(profil, budzet, dni):
         
         realny_czas = cw_start.get("czas_min", 2) if not is_gym else 0
 
-        # 3. GŁÓWNY BLOK TRENINGOWY
         if czy_split:
             partie = plan_na_dni[i]
             for p in partie:
@@ -403,7 +396,6 @@ def generuj_plan(profil, budzet, dni):
                         plan.append((kat, cw))
                         realny_czas += cw["czas_min"]
 
-        # 4. OBOWIĄZKOWE ZAKOŃCZENIE / WYCISZENIE
         if is_gym:
             cw_koniec = pop_random(b_gym, "Zakończenie treningu") or random.choice(BAZA_SILOWNIA["Zakończenie treningu"]).copy()
             cw_koniec["uwagi"] = ""
@@ -417,7 +409,7 @@ def generuj_plan(profil, budzet, dni):
     st.session_state.is_gym = is_gym
 
 # ==============================================================================
-# EKSPORTY DO PLIKÓW
+# REJESTR EKSPORTÓW
 # ==============================================================================
 def generuj_docx():
     doc = Document()
@@ -444,30 +436,128 @@ def generuj_docx():
     return bio.getvalue()
 
 def generuj_excel(liczba_dni):
-    if not st.session_state.wylosowany_plan_cache: return None
-    dane_excel = [["Imię i Nazwisko:", "", "", "", "", "", ""], ["Płeć:", "", "", "", "", "", ""], ["", "", "", "", "", "", ""]]
+    if not st.session_state.wylosowany_plan_cache: 
+        return None
+    
+    dane_excel = []
+    is_gym = st.session_state.get('is_gym', False)
+    
+    dane_excel.append(["Imię i Nazwisko:", "", "", "", "", "", ""])
+    dane_excel.append(["Płeć:", "", "", "", "", "", ""])
+    
+    realny_czas = sum(compliance_x[1].get('czas_min', 0) for compliance_x in st.session_state.wylosowany_plan_cache if compliance_x[0] != "NAGŁÓWEK DNIA")
+    if is_gym:
+        dane_excel.append(["Podsumowanie planu:", "Trening Siłowy (Ilościowy)", "", "", "", "", ""])
+    else:
+        dane_excel.append(["Całkowity czas planu:", f"{realny_czas} min", "", "", "", "", ""])
+        
+    dane_excel.append(["", "", "", "", "", "", ""])
+    czy_wielodniowy_excel = any(kat == "NAGŁÓWEK DNIA" for kat, cw in st.session_state.wylosowany_plan_cache)
+    
+    if czy_wielodniowy_excel:
+        czasy_dni = []
+        for k, c in st.session_state.wylosowany_plan_cache:
+            if k == "NAGŁÓWEK DNIA": czasy_dni.append(0)
+            else:
+                if czasy_dni: czasy_dni[-1] += c.get('czas_min', 0)
+
+        lp = 1
+        dzien_aktualny = 0
+        for idx, (kat, cw) in enumerate(st.session_state.wylosowany_plan_cache):
+            if kat == "NAGŁÓWEK DNIA":
+                if dzien_aktualny > 0: dane_excel.append(["", "", "", "", "", "", ""])
+                dzien_aktualny += 1
+                nazwa_dnia_i_partii = cw['nazwa']
+                if is_gym: dane_excel.append([f"{nazwa_dnia_i_partii}", "", "", "", "", "", ""])
+                else:
+                    czas_tego_dnia = czasy_dni[dzien_aktualny - 1] if dzien_aktualny <= len(czasy_dni) else 0
+                    dane_excel.append([f"{nazwa_dnia_i_partii} - Czas trwania: {czas_tego_dnia} min", "", "", "", "", "", ""])
+                dane_excel.append(["L.p.", "Nazwa ćwiczenia", "Czas", "Ilość serii", "Ilość powtórzeń", "Sposób wykonania", "Uwagi"])
+                lp = 1
+            else:
+                p_lower = str(cw['parametry']).lower()
+                if 'x' in p_lower:
+                    parts = p_lower.split('x')
+                    serie = parts[0].replace('serie','').replace('seria','').strip()
+                    powt = parts[1].replace('powtórzeń','').replace('powtórzenia','').strip()
+                else:
+                    serie = "1"
+                    powt = cw['parametry'].strip()
+                czas_str = "-" if is_gym else f"{cw.get('czas_min', 0)} min"
+                dane_excel.append([lp, cw['nazwa'], czas_str, serie, powt, cw['opis'], cw.get('uwagi', '')])
+                lp += 1
+    else:
+        for dzien in range(1, liczba_dni + 1):
+            dane_excel.append([f"DZIEŃ {dzien}", "", "", "", "", "", ""])
+            dane_excel.append(["L.p.", "Nazwa ćwiczenia", "Czas", "Ilość serii", "Ilość powtórzeń", "Sposób wykonania", "Uwagi"])
+            for compliance_idx, (kat, cw) in enumerate(st.session_state.wylosowany_plan_cache, 1):
+                p_lower = str(cw['parametry']).lower()
+                if 'x' in p_lower:
+                    parts = p_lower.split('x')
+                    serie = parts[0].replace('serie','').replace('seria','').strip()
+                    powt = parts[1].replace('powtórzeń','').replace('powtórzenia','').strip()
+                else:
+                    serie = "1"
+                    powt = cw['parametry'].strip()
+                czas_str = "-" if is_gym else f"{cw.get('czas_min', 0)} min"
+                dane_excel.append([compliance_idx, cw['nazwa'], czas_str, serie, powt, cw['opis'], cw.get('uwagi', '')])
+
     df = pd.DataFrame(dane_excel)
     bio = io.BytesIO()
-    with pd.ExcelWriter(bio, engine='openpyxl') as writer:
-        df.to_excel(writer, index=False, header=False, sheet_name='Harmonogram')
+    writer = pd.ExcelWriter(bio, engine='openpyxl')
+    df.to_excel(writer, index=False, header=False, sheet_name='Harmonogram')
+    worksheet = writer.sheets['Harmonogram']
+    
+    for c_letter, c_width in [('A', 8), ('B', 30), ('C', 10), ('D', 12), ('E', 20), ('F', 50), ('G', 25)]:
+        worksheet.column_dimensions[c_letter].width = c_width
+
+    thin_border = Border(left=Side(style='thin'), right=Side(style='thin'), top=Side(style='thin'), bottom=Side(style='thin'))
+    fill_day = PatternFill(start_color="1F497D", end_color="1F497D", fill_type="solid")
+    fill_header = PatternFill(start_color="8DB4E2", end_color="8DB4E2", fill_type="solid")
+    fill_data_even = PatternFill(start_color="DCE6F1", end_color="DCE6F1", fill_type="solid")
+    
+    data_row_counter = 0
+    for r_idx, r_data in enumerate(dane_excel, 1):
+        val_a = str(r_data[0])
+        if r_idx in [1, 2, 3]:
+            worksheet.cell(row=r_idx, column=1).font = Font(bold=True)
+        elif any(val_a.startswith(prefix) for prefix in ["DZIEŃ", "Poniedziałek", "Wtorek", "Środa", "Czwartek", "Piątek", "Sobota", "Niedziela", "Dzień"]):
+            worksheet.merge_cells(start_row=r_idx, start_column=1, end_row=r_idx, end_column=7)
+            cell = worksheet.cell(row=r_idx, column=1)
+            cell.font = Font(bold=True, color="FFFFFF")
+            cell.fill = fill_day
+            cell.alignment = Alignment(horizontal='center', vertical='center')
+            for c_idx in range(1, 8): worksheet.cell(row=r_idx, column=c_idx).border = thin_border
+            data_row_counter = 0
+        elif val_a == "L.p.":
+            for c_idx in range(1, 8):
+                cell = worksheet.cell(row=r_idx, column=c_idx)
+                cell.font = Font(bold=True)
+                cell.fill = fill_header
+                cell.border = thin_border
+                cell.alignment = Alignment(horizontal='center', vertical='center')
+        elif val_a.isdigit():
+            data_row_counter += 1
+            current_fill = fill_data_even if data_row_counter % 2 == 0 else None
+            for c_idx in range(1, 8):
+                cell = worksheet.cell(row=r_idx, column=c_idx)
+                cell.border = thin_border
+                if current_fill: cell.fill = current_fill
+                cell.alignment = Alignment(wrap_text=True, vertical='top') if c_idx in [6, 7] else Alignment(horizontal='center', vertical='center')
+    writer.close()
     return bio.getvalue()
 
 # ==============================================================================
-# UI - INTERFEJS APLIKACJI MOBILNEJ / WEBOWEJ
+# UI - INTERFEJS STRONY WEBOWEJ
 # ==============================================================================
-st.title("Fizjo Workout Ultimate")
-st.markdown("Zintegrowane środowisko projektowania programów treningowych.")
-
 with st.sidebar:
     st.header("🔑 Dostęp do AI")
     user_api_key = st.text_input("Twój klucz API Groq:", type="password")
     groq_client = Groq(api_key=user_api_key) if user_api_key else None
 
     st.divider()
-
     st.header("⚙️ Konfiguracja")
     
-    # --- NOWOŚĆ: CSS KOLORUJĄCY OPCJE TRENINGOWE ---
     st.markdown("""
     <style>
     div[role="radiogroup"] label {
@@ -522,79 +612,68 @@ with st.sidebar:
     st.divider()
     if st.session_state.wylosowany_plan_cache:
         st.success("Plan gotowy!")
-        st.download_button("💾 POBIERZ DOCX", generuj_docx(), "Plan.docx", use_container_width=True)
+        st.download_button("💾 POBIERZ DOCX", generuj_docx(), "Plan_Treningowy.docx", use_container_width=True)
+        # PRZYWRÓCONY PRZYCISK POBIERANIA EXCELA
+        st.download_button("📊 POBIERZ EXCEL", generuj_excel(dni), "Plan_Treningowy.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
 
 # ZAKŁADKI GŁÓWNE
 tab1, tab2, tab3, tab4 = st.tabs(["📝 Twój Plan", "➕ Kreator", "✨ Asystent AI", "⚙️ Baza Ćwiczeń"])
 
 # ZAKŁADKA 1: WYGENEROWANY PLAN
-# ZAKŁADKA 1: WYGENEROWANY PLAN
-# ZAKŁADKA 1: WYGENEROWANY PLAN
 with tab1:
     if not st.session_state.wylosowany_plan_cache:
         st.info("👈 Użyj panelu bocznego, aby wygenerować plan lub przejdź do Kreatora.")
     else:
-        # Funkcja przeliczająca inteligentnie nazwy po zmianie kolejności
         def odswiez_nazwy_dni(blocks):
             dni_tyg = ["Poniedziałek", "Wtorek", "Środa", "Czwartek", "Piątek", "Sobota", "Niedziela"]
-            for i, block in enumerate(blocks):
+            for compliance_i, block in enumerate(blocks):
                 kat, cw = block[0]
                 if kat == "NAGŁÓWEK DNIA":
                     typ = cw.get("typ", "")
                     if typ == "Split":
-                        nowy_dzien = dni_tyg[i] if i < 7 else f"Dzień {i+1}"
+                        nowy_dzien = dni_tyg[compliance_i] if compliance_i < 7 else f"Dzień {compliance_i+1}"
                         cw["nazwa"] = f"{nowy_dzien}: {cw['partie']}"
                     elif typ == "Kompleksowy":
-                        cw["nazwa"] = f"Dzień {i+1} (FIZJO: Kompleksowy)"
+                        cw["nazwa"] = f"Dzień {compliance_i+1} (FIZJO: Kompleksowy)"
 
-        # 1. Grupowanie w "bloki dni"
         days_blocks = []
         current_block = []
         for item in st.session_state.wylosowany_plan_cache:
             if item[0] == "NAGŁÓWEK DNIA":
                 if current_block: days_blocks.append(current_block)
                 current_block = [item]
-            else:
-                current_block.append(item)
-        if current_block:
-            days_blocks.append(current_block)
+            else: current_block.append(item)
+        if current_block: days_blocks.append(current_block)
 
         abs_idx = 0
         licznik = 1
         
         for block_idx, block in enumerate(days_blocks):
             for item_idx_in_block, (kat, cw) in enumerate(block):
-                
-                # A. Nagłówek Dnia
                 if kat == "NAGŁÓWEK DNIA":
                     st.markdown(f"### 📅 {cw['nazwa']}")
                     c1, c2, c3, c4 = st.columns([1.5, 1.5, 2, 5])
-                    
                     if block_idx > 0:
                         if c1.button("⬆️ Dzień", key=f"up_day_{abs_idx}", use_container_width=True):
                             days_blocks[block_idx], days_blocks[block_idx-1] = days_blocks[block_idx-1], days_blocks[block_idx]
                             odswiez_nazwy_dni(days_blocks)
                             st.session_state.wylosowany_plan_cache = [i for b in days_blocks for i in b]
                             st.rerun()
-                    
                     if block_idx < len(days_blocks) - 1:
                         if c2.button("⬇️ Dzień", key=f"down_day_{abs_idx}", use_container_width=True):
                             days_blocks[block_idx], days_blocks[block_idx+1] = days_blocks[block_idx+1], days_blocks[block_idx]
                             odswiez_nazwy_dni(days_blocks)
                             st.session_state.wylosowany_plan_cache = [i for b in days_blocks for i in b]
                             st.rerun()
-                            
                     if c3.button("❌ Usuń cały", key=f"del_day_{abs_idx}", type="primary", use_container_width=True):
                         days_blocks.pop(block_idx)
                         odswiez_nazwy_dni(days_blocks)
                         st.session_state.wylosowany_plan_cache = [i for b in days_blocks for i in b]
                         st.rerun()
-                        
                     licznik = 1
                     abs_idx += 1
                     continue
                     
-                # B. Pojedyncze ćwiczenie
                 with st.expander(f"{licznik}. {cw['nazwa']} ({kat})", expanded=True):
                     col1, col2 = st.columns([3, 2])
                     with col1:
@@ -603,11 +682,11 @@ with tab1:
                         st.session_state.wylosowany_plan_cache[abs_idx][1]['parametry'] = nowe_parametry
                         st.session_state.wylosowany_plan_cache[abs_idx][1]['uwagi'] = nowe_uwagi
                         st.caption(f"**Anatomia:** {cw['miesnie']}")
+                        st.write(cw['opis'])
                     with col2:
                         c_up, c_down, c_del = st.columns(3)
                         moze_w_gore = abs_idx > 0 and st.session_state.wylosowany_plan_cache[abs_idx-1][0] != "NAGŁÓWEK DNIA"
                         moze_w_dol = abs_idx < len(st.session_state.wylosowany_plan_cache) - 1 and st.session_state.wylosowany_plan_cache[abs_idx+1][0] != "NAGŁÓWEK DNIA"
-                        
                         if moze_w_gore and c_up.button("⬆️", key=f"up_{abs_idx}"):
                             st.session_state.wylosowany_plan_cache[abs_idx], st.session_state.wylosowany_plan_cache[abs_idx-1] = st.session_state.wylosowany_plan_cache[abs_idx-1], st.session_state.wylosowany_plan_cache[abs_idx]
                             st.rerun()
@@ -617,15 +696,12 @@ with tab1:
                         if c_del.button("❌", key=f"del_{abs_idx}", type="primary"):
                             st.session_state.wylosowany_plan_cache.pop(abs_idx)
                             st.rerun()
-                            
                 licznik += 1
                 abs_idx += 1
 
 # ZAKŁADKA 2: KREATOR MANUALNY
 with tab2:
     st.subheader("Manualne dodawanie ćwiczeń")
-    
-    # --- NOWOŚĆ: ODDZIELNE PODZAKŁADKI I WYSZUKIWARKI (PKT 3) ---
     podzak_fizjo, podzak_gym = st.tabs(["🏥 Baza Fizjoterapia", "🏋️ Baza Siłownia"])
     
     with podzak_fizjo:
