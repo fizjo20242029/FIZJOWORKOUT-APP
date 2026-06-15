@@ -637,16 +637,25 @@ def generuj_excel_gym(liczba_dni):
             else:
                 serie, powt = "1", parametry_str.strip()
                 
-            ws_plan.cell(row=row_idx, column=1, value=ex_nr).alignment = Alignment(horizontal="center")
+            # Bezpieczne tworzenie komórek
+            c1 = ws_plan.cell(row=row_idx, column=1)
+            c1.value = ex_nr
+            c1.alignment = Alignment(horizontal="center")
             
-            # Włączenie zawijania tekstu dla nazw ćwiczeń w Planie
-            cell_b = ws_plan.cell(row=row_idx, column=2, value=cw['nazwa'])
-            cell_b.alignment = Alignment(wrap_text=True, vertical='center', horizontal='left')
+            c2 = ws_plan.cell(row=row_idx, column=2, value=cw['nazwa'])
+            c2.alignment = Alignment(wrap_text=True, vertical='center', horizontal='left')
             
-            ws_plan.cell(row=row_idx, column=3, value=serie).alignment = Alignment(horizontal="center")
-            ws_plan.cell(row=row_idx, column=4, value=powt).alignment = Alignment(horizontal="center")
-            for col_idx in range(1, 9): ws_plan.cell(row=row_idx, column=col_idx).border = thin_border
-            row_idx += 1; ex_nr += 1
+            c3 = ws_plan.cell(row=row_idx, column=3, value=serie)
+            c3.alignment = Alignment(horizontal="center")
+            
+            c4 = ws_plan.cell(row=row_idx, column=4, value=powt)
+            c4.alignment = Alignment(horizontal="center")
+            
+            for col_idx in range(1, 9): 
+                ws_plan.cell(row=row_idx, column=col_idx).border = thin_border
+            
+            row_idx += 1
+            ex_nr += 1
             
     for c_letter, c_width in [('A', 5), ('C', 10), ('D', 15), ('E', 10), ('F', 10), ('G', 12), ('H', 15)]:
         ws_plan.column_dimensions[c_letter].width = c_width
