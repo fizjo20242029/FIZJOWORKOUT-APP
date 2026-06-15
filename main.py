@@ -786,23 +786,34 @@ with tab2:
                     st.toast("Dodano!")
 # NOWA ZAKŁADKA: PROTOKOŁY KLINICZNE (PANEL GŁÓWNY)
 # NOWA ZAKŁADKA: PROTOKOŁY KLINICZNE (PANEL GŁÓWNY)
+# NOWA ZAKŁADKA: PROTOKOŁY KLINICZNE (PANEL GŁÓWNY)
 with tab_protokoly:
     st.subheader("🏥 Gotowe Protokoły Kliniczne")
-    st.markdown("Wyszukaj lub kliknij wybraną jednostkę chorobową, aby natychmiast załadować dedykowany zestaw ćwiczeń do zakładki **Twój Plan**.")
+    st.markdown("Kliknij jednostkę chorobową, aby **zobaczyć podgląd przypisanych ćwiczeń**, a następnie załaduj ją do głównego planu.")
     
     if PROTOKOLY_KLINICZNE:
         # Wyszukiwarka chorób
         szukana_choroba = st.text_input("🔍 Wyszukaj jednostkę chorobową (np. 'rwa', 'zespół'):", key="szukaj_proto").strip().lower()
         st.divider()
         
-        # Filtrowanie i generowanie przycisków
+        # Filtrowanie i generowanie kart podglądu
         znaleziono_protokol = False
-        for choroba in PROTOKOLY_KLINICZNE.keys():
+        for choroba, lista_cwiczen in PROTOKOLY_KLINICZNE.items():
             if szukana_choroba in choroba.lower():
                 znaleziono_protokol = True
-                if st.button(f"⚕️ {choroba}", key=f"proto_btn_{choroba}", use_container_width=True):
-                    generuj_protokol(choroba)
-                    st.rerun()
+                
+                # Zmiana przycisku na expander (Podgląd)
+                with st.expander(f"⚕️ {choroba} (Podgląd: {len(lista_cwiczen)} ćw.)", expanded=False):
+                    st.markdown("**Lista ćwiczeń w tym protokole:**")
+                    for nazwa_cw in lista_cwiczen:
+                        st.markdown(f"• {nazwa_cw}")
+                    
+                    st.write("") # Odstęp dla estetyki
+                    
+                    # Przycisk aktywacji wewnątrz podglądu
+                    if st.button("🚀 URUCHOM TEN PROTOKÓŁ (Załaduj do planu)", key=f"proto_btn_{choroba}", use_container_width=True, type="primary"):
+                        generuj_protokol(choroba)
+                        st.rerun()
                     
         if not znaleziono_protokol:
             st.info("Nie znaleziono protokołu dla wpisanej frazy.")
