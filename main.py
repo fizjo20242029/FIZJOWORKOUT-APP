@@ -61,6 +61,7 @@ BAZA_FIZJO = {
         {"nazwa": "Uginanie przedramion z supinacją", "opis": "INSTRUKCJA: W staniu, hantle chwytem neutralnym. Uginaj łokcie rotując dłonie.", "czas_min": 2, "parametry": "3 serie x 15 powtórzeń", "miesnie": "Biceps"},
         {"nazwa": "Prostowanie przedramion w opadzie", "opis": "INSTRUKCJA: Opad tułowia, łokcie 90 stopni. Prostuj ramię w tył.", "czas_min": 3, "parametry": "3 serie x 12 powtórzeń", "miesnie": "Triceps"},
         {"nazwa": "Spacer farmera z kettlebell", "opis": "INSTRUKCJA: Chwyć odważniki. Idź powolnym krokiem ze stabilnymi barkami.", "czas_min": 3, "parametry": "3 serie x 45 sekund", "miesnie": "Przedramiona, góra pleców"}
+        {"nazwa": "Ślizg nerwu pośrodkowego", "opis": "INSTRUKCJA: Stojąc przy ścianie, ramię odwiedzione do 90st. Wykonuj powolny wyprost łokcia i nadgarstka, jednocześnie pochylając głowę w stronę przeciwną.", "czas_min": 2, "parametry": "15 powtórzeń na stronę", "miesnie": "Układ nerwowy obręczy barkowej"},
     ],
     "Core (Tułów)": [
         {"nazwa": "Plank (Podpór przodem)", "opis": "INSTRUKCJA: Oprzyj się na przedramionach i palcach stóp. Ciało w linii prostej.", "czas_min": 3, "parametry": "3 serie x 30 sekund", "miesnie": "Core"},
@@ -73,6 +74,8 @@ BAZA_FIZJO = {
         {"nazwa": "Opuszczanie obustronne nóg", "opis": "INSTRUKCJA: Leżenie tyłem. Powoli opuszczaj obie proste nogi.", "czas_min": 2, "parametry": "3 serie x 10 powtórzeń", "miesnie": "Dół brzucha"},
         {"nazwa": "Skośne spięcia brzucha", "opis": "INSTRUKCJA: Leżenie tyłem. Kieruj ramię w stronę przeciwnego kolana.", "czas_min": 2, "parametry": "3 serie x 15 powtórzeń", "miesnie": "Skośne brzucha"},
         {"nazwa": "Russian Twist", "opis": "INSTRUKCJA: Siad z uniesionymi stopami. Rotuj klatkę piersiową.", "czas_min": 2, "parametry": "3 serie x 20 skrętów", "miesnie": "Skośne brzucha"}
+        {"nazwa": "Przeprosty McKenziego (Leżenie przodem)", "opis": "INSTRUKCJA: Leżenie przodem. Dłonie na wysokości barków. Powoli prostuj łokcie, unosząc samą klatkę piersiową, miednica zostaje przyklejona do maty.", "czas_min": 2, "parametry": "3x10 powtórzeń", "miesnie": "Prostownik grzbietu"},
+        
     ],
     "Kończyna dolna": [
         {"nazwa": "Przysiad klasyczny (Squat)", "opis": "INSTRUKCJA: Stopy na szerokość barków. Schodź biodrami w dół i w tył.", "czas_min": 2, "parametry": "3 serie x 12 powtórzeń", "miesnie": "Czworogłowy uda, pośladki"},
@@ -85,6 +88,8 @@ BAZA_FIZJO = {
         {"nazwa": "Unoszenie prostej nogi (SLR)", "opis": "INSTRUKCJA: Unoś prostą nogę do wysokości drugiego kolana.", "czas_min": 2, "parametry": "3 serie x 12 na nogę", "miesnie": "Prosty uda"},
         {"nazwa": "Martwy ciąg na jednej nodze", "opis": "INSTRUKCJA: Stojąc na jednej nodze, wykonaj skłon w przód.", "czas_min": 3, "parametry": "3 serie x 8 na stronę", "miesnie": "Dwugłowy uda"},
         {"nazwa": "Krzesełko przy ścianie", "opis": "INSTRUKCJA: Oprzyj plecy o ścianę, zejdź biodrami do kąta 90 stopni. Trzymaj nieruchomo.", "czas_min": 2, "parametry": "3x30 sekund", "miesnie": "Czworogłowy uda, stabilizacja kolana"}
+        {"nazwa": "Ślizg nerwu kulszowego (Neuromobilizacja)", "opis": "INSTRUKCJA: Leżenie tyłem, noga ugięta w biodrze do 90st. Prostuj kolano zadzierając palce stopy na siebie (napięcie), a opuszczając stopę obciągaj palce (luzowanie).", "czas_min": 2, "parametry": "15 powtórzeń na stronę", "miesnie": "Układ nerwowy, tylna taśma"},
+        {"nazwa": "Rozciąganie zginaczy biodra w klęku", "opis": "INSTRUKCJA: Klęk jednonóż. Wypchnij miednicę mocno do przodu, zachowując wyprostowany tułów, aż poczujesz rozciąganie z przodu uda nogi zakrocznej.", "czas_min": 2, "parametry": "3x30 sekund na stronę", "miesnie": "Mięsień biodrowo-lędźwiowy, prosty uda"},
     ]
 }
 
