@@ -1041,18 +1041,32 @@ with st.sidebar:
         st.success("Plan gotowy!")
         st.download_button("💾 POBIERZ RAPORT DOCX", generuj_docx(), "Raport_Pacjenta.docx", use_container_width=True)
         
-        # --- ULEPSZONY, INTELIGENTNY DETEKTOR TYPU PLANU ---
-        # Sprawdza wielkość liter oraz obecność słowa "split" w typie i nazwie nagłówka
+        # --- PANCERNY, DWUPOZIOMOWY DETEKTOR TYPU PLANU ---
         czy_split = False
+        
+        # Poziom 1: Szukamy słowa "split" w strukturze cache (kategorie i nagłówki)
         for kat, cw in st.session_state.wylosowany_plan_cache:
-            if kat == "NAGŁÓWEK DNIA":
+            if "split" in str(kat).lower():
+                czy_split = True
+                break
+            if isinstance(cw, dict):
                 typ_planu = str(cw.get("typ", "")).lower()
                 nazwa_planu = str(cw.get("nazwa", "")).lower()
                 if "split" in typ_planu or "split" in nazwa_planu:
                     czy_split = True
                     break
+                    
+        # Poziom 2 (Koło ratunkowe): Szukamy w wyborach użytkownika w UI
+        # Przeszukujemy stan sesji - jeśli w jakimś selectbox/radio wybrano opcję ze słowem "split"
+        if not czy_split:
+            for klucz, wartosc in st.session_state.items():
+                # Ignorujemy sam cache, aby przypadkowe ćwiczenie "split squat" w planie FBW nie oszukało systemu
+                if klucz != "wylosowany_plan_cache" and isinstance(wartosc, str):
+                    if "split" in wartosc.lower():
+                        czy_split = True
+                        break
                 
-        # --- RYSOWANIE ODPOWIEDNIEGO PRZYCISKU ---
+        # --- RYSOWANIE ODPOWIEDNIEGO PRZYCISKU NA PODSTAWIE DETEKCJI ---
         if czy_split:
             dane_gym = generuj_excel_gym(dni)
             if dane_gym:
