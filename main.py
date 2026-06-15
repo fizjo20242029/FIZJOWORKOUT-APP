@@ -272,68 +272,31 @@ for baza in [BAZA_FIZJO, BAZA_SILOWNIA, GLOBALNA_BAZA]:
 # ==============================================================================
 # LOGIKA GENERATORÓW
 # ==============================================================================
+# ==============================================================================
+# LOGIKA GENERATORÓW
+# ==============================================================================
 def generuj_plan(profil, budzet, dni):
     plan = []
-    realny_czas = 0
     b_fizjo = {k: list(v) for k, v in BAZA_FIZJO.items()}
     b_gym = {k: list(v) for k, v in BAZA_SILOWNIA.items()}
 
-    if profil.startswith("FIZJO:"):
-        if "Kompleksowy" in profil:
-            if b_fizjo["Oddechowe"]:
-                cw_start = random.choice(b_fizjo["Oddechowe"]).copy()
-                cw_start["uwagi"] = ""
-                plan.append(("Oddechowe (Rozgrzewka)", cw_start))
-                realny_czas += cw_start["czas_min"]
-                b_fizjo["Oddechowe"].remove(next(c for c in BAZA_FIZJO["Oddechowe"] if c["nazwa"] == cw_start["nazwa"]))
+    def pop_random(baza, kat):
+        if baza.get(kat) and len(baza[kat]) > 0:
+            idx = random.randint(0, len(baza[kat])-1)
+            cw = baza[kat].pop(idx).copy()
+            cw["uwagi"] = ""
+            return cw
+        return None
 
-            cw_koniec = None
-            if b_fizjo["Oddechowe"]:
-                cw_koniec = random.choice(b_fizjo["Oddechowe"]).copy()
-                cw_koniec["uwagi"] = ""
-            
-            czas_koncowy = cw_koniec["czas_min"] if cw_koniec else 0
-            lancuch = ["Głowa/Szyja", "Kończyna górna", "Core (Tułów)", "Kończyna dolna"]
-            
-            puste = 0
-            while realny_czas + czas_koncowy < budzet and puste < 10:
-                dodano = False
-                for kat in lancuch:
-                    if b_fizjo.get(kat):
-                        cw = random.choice(b_fizjo[kat]).copy()
-                        if realny_czas + cw["czas_min"] + czas_koncowy <= budzet:
-                            cw["uwagi"] = ""
-                            plan.append((kat, cw))
-                            realny_czas += cw["czas_min"]
-                            b_fizjo[kat].remove(next(c for c in BAZA_FIZJO[kat] if c["nazwa"] == cw["nazwa"]))
-                            dodano = True
-                if not dodano: puste += 1
-                else: puste = 0
-                
-            if cw_koniec: plan.append(("Oddechowe (Wyciszenie)", cw_koniec))
+    czy_split = "Split" in profil
+    czy_wielo_dniowy = czy_split or "Kompleksowy" in profil
+    rzeczywista_liczba_dni = dni if czy_wielo_dniowy else 1
+    is_gym = "GYM:" in profil
 
-        else:
-            kat = profil.split(" - ")[1].replace("Tylko ", "")
-            dostepne = b_fizjo.get(kat, [])
-            while realny_czas < budzet and dostepne:
-                cw = random.choice(dostepne).copy()
-                if realny_czas + cw["czas_min"] <= budzet:
-                    cw["uwagi"] = ""
-                    plan.append((kat, cw))
-                    realny_czas += cw["czas_min"]
-                    dostepne.remove(next(c for c in BAZA_FIZJO[kat] if c["nazwa"] == cw["nazwa"]))
-                else:
-                    break
-
-    elif profil.startswith("GYM:"):
-        rozgrzewka = random.choice(b_gym["Rozgrzewka"]).copy()
-        rozgrzewka["uwagi"] = ""
-        zakonczenie = random.choice(b_gym["Zakończenie treningu"]).copy()
-        zakonczenie["uwagi"] = ""
-
-        if "Split" in profil:
-            dni_tygodnia = ["Poniedziałek", "Wtorek", "Środa", "Czwartek", "Piątek", "Sobota", "Niedziela"]
-            # --- NOWOŚĆ: NAPRAWA DLA 5, 6 i 7 DNI SPLITU (PKT 5) ---
+    dni_tygodnia = ["Poniedziałek", "Wtorek", "Środa", "Czwartek", "Piątek", "Sobota", "Niedziela"]
+    
+    if czy_split:
+        if is_gym:
             uklady = {
                 1: [["Klatka piersiowa", "Plecy", "Nogi", "Ręce", "Pośladki"]],
                 2: [["Klatka piersiowa", "Ręce"], ["Plecy", "Nogi", "Pośladki"]],
@@ -343,50 +306,115 @@ def generuj_plan(profil, budzet, dni):
                 6: [["Klatka piersiowa"], ["Plecy"], ["Nogi"], ["Ręce"], ["Pośladki"], ["Klatka piersiowa", "Plecy"]],
                 7: [["Klatka piersiowa"], ["Plecy"], ["Nogi"], ["Ręce"], ["Pośladki"], ["Klatka piersiowa"], ["Plecy", "Nogi"]]
             }
-            plan_na_dni = uklady.get(dni, uklady[7][:dni])
+        else:
+            # Uklady podziału dla fizjoterapii (pomija 'Oddechowe' - to jest auto-rozgrzewka)
+            uklady = {
+                1: [["Głowa/Szyja", "Kończyna górna", "Core (Tułów)", "Kończyna dolna"]],
+                2: [["Kończyna górna", "Głowa/Szyja"], ["Kończyna dolna", "Core (Tułów)"]],
+                3: [["Kończyna górna", "Głowa/Szyja"], ["Core (Tułów)"], ["Kończyna dolna"]],
+                4: [["Głowa/Szyja"], ["Kończyna górna"], ["Core (Tułów)"], ["Kończyna dolna"]],
+                5: [["Głowa/Szyja"], ["Kończyna górna"], ["Core (Tułów)"], ["Kończyna dolna"], ["Core (Tułów)", "Kończyna górna"]],
+                6: [["Głowa/Szyja"], ["Kończyna górna"], ["Core (Tułów)"], ["Kończyna dolna"], ["Kończyna górna"], ["Core (Tułów)"]],
+                7: [["Głowa/Szyja"], ["Kończyna górna"], ["Core (Tułów)"], ["Kończyna dolna"], ["Kończyna górna"], ["Core (Tułów)"], ["Kończyna dolna"]]
+            }
+        plan_na_dni = uklady.get(rzeczywista_liczba_dni, uklady[7][:rzeczywista_liczba_dni])
 
-            for i in range(dni):
+    for i in range(rzeczywista_liczba_dni):
+        # 1. GENEROWANIE NAGŁÓWKA DNIA Z PAMIĘCIĄ PARTII (DLA AUTO-ZMIANY NAZWY)
+        if czy_wielo_dniowy:
+            if czy_split:
                 dzien = dni_tygodnia[i]
                 partie = plan_na_dni[i]
-                plan.append(("NAGŁÓWEK DNIA", {"nazwa": f"{dzien}: {' + '.join([p.upper() for p in partie])}", "opis": "", "czas_min": 0, "parametry": "-", "miesnie": "-", "uwagi": ""}))
-                plan.append(("GYM: Rozgrzewka", rozgrzewka.copy()))
-                
-                for p in partie:
-                    dostepne = list(b_gym.get(p, []))
-                    dodano = 0
-                    while dodano < budzet and dostepne:
-                        cw = random.choice(dostepne).copy()
-                        cw["uwagi"] = ""
-                        plan.append((f"GYM: {p}", cw))
-                        dodano += 1
-                        dostepne.remove(next(c for c in BAZA_SILOWNIA[p] if c["nazwa"] == cw["nazwa"]))
-                plan.append(("GYM: Zakończenie", zakonczenie.copy()))
-        else:
-            plan.append(("GYM: Rozgrzewka", rozgrzewka))
-            if "Ogólnorozwojowy" in profil:
-                for p in ["Klatka piersiowa", "Plecy", "Nogi", "Ręce", "Pośladki"]:
-                    dostepne = list(b_gym.get(p, []))
-                    dodano = 0
-                    while dodano < budzet and dostepne:
-                        cw = random.choice(dostepne).copy()
-                        cw["uwagi"] = ""
-                        plan.append((f"GYM: {p}", cw))
-                        dodano += 1
-                        dostepne.remove(next(c for c in BAZA_SILOWNIA[p] if c["nazwa"] == cw["nazwa"]))
+                partie_str = ' + '.join([p.upper() for p in partie])
+                nazwa_dnia = f"{dzien}: {partie_str}"
+                naglowek = {"nazwa": nazwa_dnia, "typ": "Split", "partie": partie_str, "opis": "", "czas_min": 0, "parametry": "-", "miesnie": "-", "uwagi": ""}
             else:
-                kat = profil.split(" - ")[1]
-                dostepne = b_gym.get(kat, [])
+                nazwa_dnia = f"Dzień {i+1} (FIZJO: Kompleksowy)"
+                naglowek = {"nazwa": nazwa_dnia, "typ": "Kompleksowy", "partie": "", "opis": "", "czas_min": 0, "parametry": "-", "miesnie": "-", "uwagi": ""}
+            plan.append(("NAGŁÓWEK DNIA", naglowek))
+
+        # 2. OBOWIĄZKOWA ROZGRZEWKA / ODDECH
+        if is_gym:
+            cw_start = pop_random(b_gym, "Rozgrzewka") or random.choice(BAZA_SILOWNIA["Rozgrzewka"]).copy()
+            cw_start["uwagi"] = ""
+            plan.append(("GYM: Rozgrzewka", cw_start))
+        else:
+            cw_start = pop_random(b_fizjo, "Oddechowe") or random.choice(BAZA_FIZJO["Oddechowe"]).copy()
+            cw_start["uwagi"] = ""
+            plan.append(("Oddechowe (Rozgrzewka)", cw_start))
+        
+        realny_czas = cw_start.get("czas_min", 2) if not is_gym else 0
+
+        # 3. GŁÓWNY BLOK TRENINGOWY
+        if czy_split:
+            partie = plan_na_dni[i]
+            for p in partie:
                 dodano = 0
-                while dodano < budzet and dostepne:
-                    cw = random.choice(dostepne).copy()
-                    cw["uwagi"] = ""
-                    plan.append((f"GYM: {kat}", cw))
+                while dodano < budzet:
+                    baza_docelowa = b_gym if is_gym else b_fizjo
+                    cw = pop_random(baza_docelowa, p)
+                    if not cw: break
+                    etykieta = f"GYM: {p}" if is_gym else p
+                    plan.append((etykieta, cw))
                     dodano += 1
-                    dostepne.remove(next(c for c in BAZA_SILOWNIA[kat] if c["nazwa"] == cw["nazwa"]))
-            plan.append(("GYM: Zakończenie", zakonczenie))
+        else:
+            if is_gym:
+                if "Ogólnorozwojowy" in profil:
+                    for p in ["Klatka piersiowa", "Plecy", "Nogi", "Ręce", "Pośladki"]:
+                        dodano = 0
+                        while dodano < budzet:
+                            cw = pop_random(b_gym, p)
+                            if not cw: break
+                            plan.append((f"GYM: {p}", cw))
+                            dodano += 1
+                else:
+                    kat = profil.split(" - ")[1]
+                    dodano = 0
+                    while dodano < budzet:
+                        cw = pop_random(b_gym, kat)
+                        if not cw: break
+                        plan.append((f"GYM: {kat}", cw))
+                        dodano += 1
+            else:
+                czas_koncowy = 2 
+                if "Kompleksowy" in profil:
+                    lancuch = ["Głowa/Szyja", "Kończyna górna", "Core (Tułów)", "Kończyna dolna"]
+                    puste = 0
+                    while realny_czas + czas_koncowy < budzet and puste < len(lancuch):
+                        dodano_cos = False
+                        for kat in lancuch:
+                            dostepne = [c for c in b_fizjo.get(kat, []) if realny_czas + c["czas_min"] + czas_koncowy <= budzet]
+                            if dostepne:
+                                cw_wybrane = dostepne[random.randint(0, len(dostepne)-1)]
+                                cw = b_fizjo[kat].pop(b_fizjo[kat].index(cw_wybrane)).copy()
+                                cw["uwagi"] = ""
+                                plan.append((kat, cw))
+                                realny_czas += cw["czas_min"]
+                                dodano_cos = True
+                        if not dodano_cos: puste += 1
+                else:
+                    kat = profil.split(" - ")[1].replace("Tylko ", "")
+                    while realny_czas + czas_koncowy < budzet:
+                        dostepne = [c for c in b_fizjo.get(kat, []) if realny_czas + c["czas_min"] + czas_koncowy <= budzet]
+                        if not dostepne: break
+                        cw_wybrane = dostepne[random.randint(0, len(dostepne)-1)]
+                        cw = b_fizjo[kat].pop(b_fizjo[kat].index(cw_wybrane)).copy()
+                        cw["uwagi"] = ""
+                        plan.append((kat, cw))
+                        realny_czas += cw["czas_min"]
+
+        # 4. OBOWIĄZKOWE ZAKOŃCZENIE / WYCISZENIE
+        if is_gym:
+            cw_koniec = pop_random(b_gym, "Zakończenie treningu") or random.choice(BAZA_SILOWNIA["Zakończenie treningu"]).copy()
+            cw_koniec["uwagi"] = ""
+            plan.append(("GYM: Zakończenie", cw_koniec))
+        else:
+            cw_koniec = pop_random(b_fizjo, "Oddechowe") or random.choice(BAZA_FIZJO["Oddechowe"]).copy()
+            cw_koniec["uwagi"] = ""
+            plan.append(("Oddechowe (Wyciszenie)", cw_koniec))
 
     st.session_state.wylosowany_plan_cache = plan
-    st.session_state.is_gym = profil.startswith("GYM:")
+    st.session_state.is_gym = is_gym
 
 # ==============================================================================
 # EKSPORTY DO PLIKÓW
@@ -439,26 +467,49 @@ with st.sidebar:
 
     st.header("⚙️ Konfiguracja")
     
-    # --- NOWOŚĆ: RADIO ZAMIAST SELECTBOX DLA TELEFONÓW (PKT 1 i 2) ---
+    # --- NOWOŚĆ: CSS KOLORUJĄCY OPCJE TRENINGOWE ---
+    st.markdown("""
+    <style>
+    div[role="radiogroup"] label {
+        padding: 6px 10px;
+        border-radius: 8px;
+        margin-bottom: 4px;
+        transition: 0.3s;
+    }
+    div[role="radiogroup"] label:has(div:contains("FIZJO")) {
+        background-color: rgba(40, 167, 69, 0.15);
+        border-left: 4px solid #28a745;
+    }
+    div[role="radiogroup"] label:has(div:contains("GYM")) {
+        background-color: rgba(0, 123, 255, 0.15);
+        border-left: 4px solid #007bff;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+    
     profil = st.radio("Profil Silnika:", [
-        "FIZJO: Kompleksowy (Wszystkie partie)", 
-        "FIZJO: Ukierunkowany - Tylko Oddechowe",
-        "FIZJO: Ukierunkowany - Tylko Głowa/Szyja",
-        "FIZJO: Ukierunkowany - Tylko Kończyna górna",
-        "FIZJO: Ukierunkowany - Tylko Core (Tułów)",
-        "FIZJO: Ukierunkowany - Tylko Kończyna dolna",
-        "GYM: Ogólnorozwojowy (FBW - Całe Ciało)",
-        "GYM: Automatyczny Split (Dni Tygodnia)",
-        "GYM: Ukierunkowany - Klatka piersiowa",
-        "GYM: Ukierunkowany - Ręce",
-        "GYM: Ukierunkowany - Plecy",
-        "GYM: Ukierunkowany - Nogi",
-        "GYM: Ukierunkowany - Pośladki"
+        "🟩 FIZJO: Kompleksowy (Wszystkie partie)", 
+        "🟩 FIZJO: Automatyczny Split (Dni Tygodnia)",
+        "🟩 FIZJO: Ukierunkowany - Tylko Oddechowe",
+        "🟩 FIZJO: Ukierunkowany - Tylko Głowa/Szyja",
+        "🟩 FIZJO: Ukierunkowany - Tylko Kończyna górna",
+        "🟩 FIZJO: Ukierunkowany - Tylko Core (Tułów)",
+        "🟩 FIZJO: Ukierunkowany - Tylko Kończyna dolna",
+        "🟦 GYM: Ogólnorozwojowy (FBW - Całe Ciało)",
+        "🟦 GYM: Automatyczny Split (Dni Tygodnia)",
+        "🟦 GYM: Ukierunkowany - Klatka piersiowa",
+        "🟦 GYM: Ukierunkowany - Ręce",
+        "🟦 GYM: Ukierunkowany - Plecy",
+        "🟦 GYM: Ukierunkowany - Nogi",
+        "🟦 GYM: Ukierunkowany - Pośladki"
     ])
     
-    is_gym = profil.startswith("GYM:")
+    is_gym = "GYM:" in profil
+    czy_split = "Split" in profil
+    czy_wielo_dniowy = czy_split or "Kompleksowy" in profil
+    
     budzet = st.number_input("Ilość ćw. NA PARTIĘ:" if is_gym else "Budżet czasu (min):", min_value=1, max_value=120, value=4 if is_gym else 45)
-    dni = st.number_input("Liczba dni (dla Split):", min_value=1, max_value=7, value=4)
+    dni = st.number_input("Liczba dni (tylko dla Split/Kompleksowy):", min_value=1, max_value=7, value=4, disabled=not czy_wielo_dniowy)
     
     if st.button("⚡ GENERUJ AUTOMAT", use_container_width=True, type="primary"):
         generuj_plan(profil, budzet, dni)
@@ -478,51 +529,64 @@ tab1, tab2, tab3, tab4 = st.tabs(["📝 Twój Plan", "➕ Kreator", "✨ Asysten
 
 # ZAKŁADKA 1: WYGENEROWANY PLAN
 # ZAKŁADKA 1: WYGENEROWANY PLAN
+# ZAKŁADKA 1: WYGENEROWANY PLAN
 with tab1:
     if not st.session_state.wylosowany_plan_cache:
         st.info("👈 Użyj panelu bocznego, aby wygenerować plan lub przejdź do Kreatora.")
     else:
-        # 1. Grupujemy plan w "bloki dni", aby łatwo manipulować całymi dniami
+        # Funkcja przeliczająca inteligentnie nazwy po zmianie kolejności
+        def odswiez_nazwy_dni(blocks):
+            dni_tyg = ["Poniedziałek", "Wtorek", "Środa", "Czwartek", "Piątek", "Sobota", "Niedziela"]
+            for i, block in enumerate(blocks):
+                kat, cw = block[0]
+                if kat == "NAGŁÓWEK DNIA":
+                    typ = cw.get("typ", "")
+                    if typ == "Split":
+                        nowy_dzien = dni_tyg[i] if i < 7 else f"Dzień {i+1}"
+                        cw["nazwa"] = f"{nowy_dzien}: {cw['partie']}"
+                    elif typ == "Kompleksowy":
+                        cw["nazwa"] = f"Dzień {i+1} (FIZJO: Kompleksowy)"
+
+        # 1. Grupowanie w "bloki dni"
         days_blocks = []
         current_block = []
         for item in st.session_state.wylosowany_plan_cache:
             if item[0] == "NAGŁÓWEK DNIA":
-                if current_block:
-                    days_blocks.append(current_block)
+                if current_block: days_blocks.append(current_block)
                 current_block = [item]
             else:
                 current_block.append(item)
         if current_block:
             days_blocks.append(current_block)
 
-        # 2. Renderowanie widoku i przycisków
-        abs_idx = 0  # Globalny indeks w st.session_state.wylosowany_plan_cache
+        abs_idx = 0
         licznik = 1
         
         for block_idx, block in enumerate(days_blocks):
             for item_idx_in_block, (kat, cw) in enumerate(block):
                 
-                # A. Renderowanie Nagłówka Dnia z zarządzaniem
+                # A. Nagłówek Dnia
                 if kat == "NAGŁÓWEK DNIA":
                     st.markdown(f"### 📅 {cw['nazwa']}")
-                    
-                    # Przyciski zarządzania całym dniem (rozmieszczenie kolumn)
                     c1, c2, c3, c4 = st.columns([1.5, 1.5, 2, 5])
                     
                     if block_idx > 0:
                         if c1.button("⬆️ Dzień", key=f"up_day_{abs_idx}", use_container_width=True):
                             days_blocks[block_idx], days_blocks[block_idx-1] = days_blocks[block_idx-1], days_blocks[block_idx]
+                            odswiez_nazwy_dni(days_blocks)
                             st.session_state.wylosowany_plan_cache = [i for b in days_blocks for i in b]
                             st.rerun()
                     
                     if block_idx < len(days_blocks) - 1:
                         if c2.button("⬇️ Dzień", key=f"down_day_{abs_idx}", use_container_width=True):
                             days_blocks[block_idx], days_blocks[block_idx+1] = days_blocks[block_idx+1], days_blocks[block_idx]
+                            odswiez_nazwy_dni(days_blocks)
                             st.session_state.wylosowany_plan_cache = [i for b in days_blocks for i in b]
                             st.rerun()
                             
                     if c3.button("❌ Usuń cały", key=f"del_day_{abs_idx}", type="primary", use_container_width=True):
                         days_blocks.pop(block_idx)
+                        odswiez_nazwy_dni(days_blocks)
                         st.session_state.wylosowany_plan_cache = [i for b in days_blocks for i in b]
                         st.rerun()
                         
@@ -530,31 +594,26 @@ with tab1:
                     abs_idx += 1
                     continue
                     
-                # B. Renderowanie pojedynczego ćwiczenia
+                # B. Pojedyncze ćwiczenie
                 with st.expander(f"{licznik}. {cw['nazwa']} ({kat})", expanded=True):
                     col1, col2 = st.columns([3, 2])
                     with col1:
                         nowe_parametry = st.text_input("Zalecenie", cw['parametry'], key=f"p_{abs_idx}")
                         nowe_uwagi = st.text_input("Uwagi", cw.get('uwagi', ''), key=f"u_{abs_idx}")
-                        # Zapis w czasie rzeczywistym
                         st.session_state.wylosowany_plan_cache[abs_idx][1]['parametry'] = nowe_parametry
                         st.session_state.wylosowany_plan_cache[abs_idx][1]['uwagi'] = nowe_uwagi
                         st.caption(f"**Anatomia:** {cw['miesnie']}")
                     with col2:
                         c_up, c_down, c_del = st.columns(3)
-                        
-                        # Blokady, aby uniemożliwić przesunięcie ćwiczenia poza jego dzień
                         moze_w_gore = abs_idx > 0 and st.session_state.wylosowany_plan_cache[abs_idx-1][0] != "NAGŁÓWEK DNIA"
                         moze_w_dol = abs_idx < len(st.session_state.wylosowany_plan_cache) - 1 and st.session_state.wylosowany_plan_cache[abs_idx+1][0] != "NAGŁÓWEK DNIA"
                         
                         if moze_w_gore and c_up.button("⬆️", key=f"up_{abs_idx}"):
                             st.session_state.wylosowany_plan_cache[abs_idx], st.session_state.wylosowany_plan_cache[abs_idx-1] = st.session_state.wylosowany_plan_cache[abs_idx-1], st.session_state.wylosowany_plan_cache[abs_idx]
                             st.rerun()
-                        
                         if moze_w_dol and c_down.button("⬇️", key=f"down_{abs_idx}"):
                             st.session_state.wylosowany_plan_cache[abs_idx], st.session_state.wylosowany_plan_cache[abs_idx+1] = st.session_state.wylosowany_plan_cache[abs_idx+1], st.session_state.wylosowany_plan_cache[abs_idx]
                             st.rerun()
-                            
                         if c_del.button("❌", key=f"del_{abs_idx}", type="primary"):
                             st.session_state.wylosowany_plan_cache.pop(abs_idx)
                             st.rerun()
