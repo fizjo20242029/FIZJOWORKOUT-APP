@@ -20,17 +20,24 @@ def dodaj_logo_w_rogu(sciezka_do_pliku):
         with open(sciezka_do_pliku, "rb") as plik:
             zakodowane_logo = base64.b64encode(plik.read()).decode()
         
-        # Wstrzykujemy czysty kod CSS bez wtapiania tła
+        # Wstrzykujemy CSS z niezależną kontrolą szerokości i wysokości
         html = f"""
         <style>
         .logo-corner {{
             position: fixed;
-            top: 55px;       /* Odsunięcie od góry */
-            right: 25px;     /* Odsunięcie od prawej krawędzi */
-            width: 250px;    /* JESZCZE WIĘKSZY ROZMIAR (zmień tę wartość, jeśli potrzebujesz) */
-            z-index: 9999;   /* Gwarantuje, że obrazek będzie na wierzchu */
-            border-radius: 8px; /* Estetyczne, delikatne zaokrąglenie rogów */
-            box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.15); /* Delikatny cień, żeby obrazek "odrywał się" od tła */
+            top: 55px;
+            right: 25px;
+            
+            /* --- STEROWANIE ROZMIAREM --- */
+            width: 280px;    /* Nieco szerzej (wcześniej było 250px) */
+            height: 380px;   /* Znacznie wyżej (narzucamy konkretną wysokość) */
+            
+            /* Zapobiega spłaszczeniu/rozciągnięciu obrazka przy nowych wymiarach */
+            object-fit: cover; 
+            
+            z-index: 9999;
+            border-radius: 8px;
+            box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.15);
         }}
         </style>
         <img src="data:image/jpeg;base64,{zakodowane_logo}" class="logo-corner">
