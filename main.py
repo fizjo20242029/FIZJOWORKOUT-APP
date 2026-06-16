@@ -392,37 +392,20 @@ def generuj_plan(profil, budzet, dni):
     dni_tygodnia = ["Poniedziałek", "Wtorek", "Środa", "Czwartek", "Piątek", "Sobota", "Niedziela"]
     
     if czy_split:
-        # Definiujemy złoty standard - pełne 7-dniowe cykle, które będą się powtarzać
-        cykl_7_dni_gym = [["Klatka piersiowa"], ["Plecy"], ["Nogi"], ["Ręce"], ["Pośladki"], ["Klatka piersiowa", "Ręce"], ["Plecy", "Nogi"]]
-        cykl_7_dni_fizjo = [["Głowa/Szyja"], ["Kończyna górna"], ["Core (Tułów)"], ["Kończyna dolna"], ["Kończyna górna"], ["Core (Tułów)"], ["Kończyna dolna"]]
+        # Definiujemy prostą, klasyczną kolejność (tylko 1 partia na dzień)
+        kolejnosc_gym = ["Klatka piersiowa", "Plecy", "Nogi", "Ręce", "Pośladki"]
+        kolejnosc_fizjo = ["Głowa/Szyja", "Kończyna górna", "Core (Tułów)", "Kończyna dolna"]
 
-        if is_gym:
-            uklady = {
-                1: [["Klatka piersiowa", "Plecy", "Nogi", "Ręce", "Pośladki"]],
-                2: [["Klatka piersiowa", "Ręce"], ["Plecy", "Nogi", "Pośladki"]],
-                3: [["Klatka piersiowa", "Ręce"], ["Nogi", "Pośladki"], ["Plecy"]],
-                4: [["Ręce"], ["Klatka piersiowa"], ["Nogi"], ["Plecy"]],
-                5: [["Klatka piersiowa"], ["Plecy"], ["Nogi"], ["Ręce"], ["Pośladki"]],
-                6: [["Klatka piersiowa"], ["Plecy"], ["Nogi"], ["Ręce"], ["Pośladki"], ["Klatka piersiowa", "Plecy"]]
-            }
-            # Jeśli wybrano 6 lub mniej dni, bierzemy układ ze słownika. Jeśli 7 i więcej - zapętlamy cykl 7-dniowy.
-            if rzeczywista_liczba_dni <= 6:
-                plan_na_dni = uklady[rzeczywista_liczba_dni]
+        plan_na_dni = []
+        for i in range(rzeczywista_liczba_dni):
+            if is_gym:
+                # Wyciągamy jedną partię, zapętlając listę po jej zakończeniu
+                partia = kolejnosc_gym[i % len(kolejnosc_gym)]
             else:
-                plan_na_dni = [cykl_7_dni_gym[i % 7] for i in range(rzeczywista_liczba_dni)]
-        else:
-            uklady = {
-                1: [["Głowa/Szyja", "Kończyna górna", "Core (Tułów)", "Kończyna dolna"]],
-                2: [["Kończyna górna", "Głowa/Szyja"], ["Kończyna dolna", "Core (Tułów)"]],
-                3: [["Kończyna górna", "Głowa/Szyja"], ["Core (Tułów)"], ["Kończyna dolna"]],
-                4: [["Głowa/Szyja"], ["Kończyna górna"], ["Core (Tułów)", "Kończyna dolna"]],
-                5: [["Głowa/Szyja"], ["Kończyna górna"], ["Core (Tułów)"], ["Kończyna dolna"], ["Core (Tułów)", "Kończyna górna"]],
-                6: [["Głowa/Szyja"], ["Kończyna górna"], ["Core (Tułów)"], ["Kończyna dolna"], ["Kończyna górna"], ["Core (Tułów)"]]
-            }
-            if rzeczywista_liczba_dni <= 6:
-                plan_na_dni = uklady[rzeczywista_liczba_dni]
-            else:
-                plan_na_dni = [cykl_7_dni_fizjo[i % 7] for i in range(rzeczywista_liczba_dni)]
+                partia = kolejnosc_fizjo[i % len(kolejnosc_fizjo)]
+            
+            # Wrzucamy do planu dokładnie jedną partię dla danego dnia
+            plan_na_dni.append([partia])
 
     for i in range(rzeczywista_liczba_dni):
         if czy_wielo_dniowy:
