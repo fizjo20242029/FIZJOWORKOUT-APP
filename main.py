@@ -11,6 +11,33 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 import streamlit as st
 from groq import Groq
+import streamlit as st
+import base64
+
+def dodaj_tlo_z_pliku(sciezka_do_pliku):
+    try:
+        # Otwieramy plik i kodujemy go do formatu base64
+        with open(sciezka_do_pliku, "rb") as plik:
+            zakodowane_tlo = base64.b64encode(plik.read()).decode()
+        
+        # Wstrzykujemy CSS z zakodowanym obrazkiem
+        css = f"""
+        <style>
+        .stApp {{
+            background-image: url("data:image/jpeg;base64,{zakodowane_tlo}");
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+        }}
+        </style>
+        """
+        st.markdown(css, unsafe_allow_html=True)
+    except FileNotFoundError:
+        st.error(f"Nie znaleziono pliku z tłem: {sciezka_do_pliku}. Upewnij się, że plik jest w dobrym folderze!")
+
+# Wywołanie funkcji z Twoją nazwą pliku
+dodaj_tlo_z_pliku("background.jpg")
 
 # ==============================================================================
 # KONFIGURACJA STRONY STREAMLIT
