@@ -1106,7 +1106,6 @@ with st.sidebar:
         "🟦 GYM: Ukierunkowany - Pośladki",
         "🟦 GYM: Ukierunkowany - Brzuch / Core"
     ])
-    ])
     
     is_gym = "GYM:" in profil
     czy_split = "Split" in profil
