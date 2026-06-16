@@ -450,15 +450,33 @@ def generuj_plan(profil, budzet, dni):
 
         if czy_split:
             partie = plan_na_dni[i]
-            for p in partie:
-                dodano = 0
-                while dodano < budzet:
-                    baza_docelowa = b_gym if is_gym else b_fizjo
-                    cw = pop_random(baza_docelowa, p)
-                    if not cw: break
-                    etykieta = f"GYM: {p}" if is_gym else p
-                    plan.append((etykieta, cw))
-                    dodano += 1
+            
+            if is_gym:
+                # Moduł GYM: Budżet dzielimy równo na liczbę partii w danym dniu.
+                # (Jeśli masz budżet 6 ćwiczeń i 2 partie w dniu, wylosuje po 3 na każdą)
+                budzet_na_partie = max(1, budzet // len(partie))
+                for p in partie:
+                    dodano = 0
+                    while dodano < budzet_na_partie:
+                        cw = pop_random(b_gym, p)
+                        if not cw: break
+                        plan.append((f"GYM: {p}", cw))
+                        dodano += 1
+            else:
+                # Moduł FIZJO: Budżet to czas w minutach! Dzielimy wolny czas na liczbę partii.
+                czas_koncowy = 2
+                budzet_czasu_na_partie = max(1, (budzet - realny_czas) // len(partie))
+                for p in partie:
+                    wykorzystany_czas_partii = 0
+                    while wykorzystany_czas_partii + czas_koncowy < budzet_czasu_na_partie:
+                        dostepne = [c for c in b_fizjo.get(p, []) if wykorzystany_czas_partii + c["czas_min"] + czas_koncowy <= budzet_czasu_na_partie]
+                        if not dostepne: break
+                        cw_wybrane = dostepne[random.randint(0, len(dostepne)-1)]
+                        cw = b_fizjo[p].pop(b_fizjo[p].index(cw_wybrane)).copy()
+                        cw["uwagi"] = ""
+                        plan.append((p, cw))
+                        wykorzystany_czas_partii += cw["czas_min"]
+                        realny_czas += cw["czas_min"]
         else:
             if is_gym:
                 if "Ogólnorozwojowy" in profil:
