@@ -1049,7 +1049,6 @@ with col1:
 with col2:
     st.title("Fizjo Workout Ultimate K.T.")
     st.markdown("Zintegrowane środowisko projektowania programów treningowych.")
-st.markdown("Zintegrowane środowisko projektowania programów treningowych.")
 
 # Kod stylizujący pływający przycisk "Wróć na górę"
 # Kod stylizujący pływający przycisk "Wróć na górę" (Lewa strona)
