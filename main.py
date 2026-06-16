@@ -1043,7 +1043,12 @@ def generuj_excel_gym(liczba_dni):
 # UI - INTERFEJS STRONY WEBOWEJ
 # ==============================================================================
 st.markdown('<div id="poczatek-strony"></div>', unsafe_allow_html=True)
-st.title("Fizjo Workout Ultimate K.T.")
+col1, col2 = st.columns([1, 4]) # Pierwsza kolumna węższa na logo, druga szersza na tytuł
+with col1:
+    st.image("background.jpg", width=100) # Tu sterujesz wielkością
+with col2:
+    st.title("Fizjo Workout Ultimate K.T.")
+    st.markdown("Zintegrowane środowisko projektowania programów treningowych.")
 st.markdown("Zintegrowane środowisko projektowania programów treningowych.")
 
 # Kod stylizujący pływający przycisk "Wróć na górę"
