@@ -969,12 +969,12 @@ with st.sidebar:
             f"""
             <style>
             .sidebar-logo-img {{
-                width: 100%;             /* Rozciąga logo na całą szerokość paska bocznego */
-                height: auto;            /* Zachowuje idealne proporcje */
-                margin-top: -60px;       /* Popycha logo na sam szczyt ekranu */
-                margin-bottom: 20px;     /* Daje oddech przed resztą menu */
-                border-radius: 8px;      /* Delikatnie zaokrągla rogi dla elegancji */
-                box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.15); /* Subtelny cień, żeby odrywało się od tła */
+                width: 100%;             
+                height: auto;            
+                margin-top: 0px;         /* ZMIANA: Zresetowano ujemny margines, aby odsłonić przycisk zamykania */
+                margin-bottom: 20px;     
+                border-radius: 8px;      
+                box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.15); 
             }}
             </style>
             <img src="data:image/jpeg;base64,{zakodowane_logo}" class="sidebar-logo-img">
