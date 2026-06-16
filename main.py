@@ -11,43 +11,7 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 import streamlit as st
 from groq import Groq
-import streamlit as st
-import base64
 
-def dodaj_logo_w_rogu(sciezka_do_pliku):
-    try:
-        # Otwieramy plik i kodujemy go do formatu base64
-        with open(sciezka_do_pliku, "rb") as plik:
-            zakodowane_logo = base64.b64encode(plik.read()).decode()
-        
-        # Wstrzykujemy CSS z niezależną kontrolą szerokości i wysokości
-        html = f"""
-        <style>
-        .logo-corner {{
-            position: fixed;
-            top: 55px;
-            right: 25px;
-            
-            /* --- STEROWANIE ROZMIAREM --- */
-            width: 280px;    /* Nieco szerzej (wcześniej było 250px) */
-            height: 380px;   /* Znacznie wyżej (narzucamy konkretną wysokość) */
-            
-            /* Zapobiega spłaszczeniu/rozciągnięciu obrazka przy nowych wymiarach */
-            object-fit: cover; 
-            
-            z-index: 9999;
-            border-radius: 8px;
-            box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.15);
-        }}
-        </style>
-        <img src="data:image/jpeg;base64,{zakodowane_logo}" class="logo-corner">
-        """
-        st.markdown(html, unsafe_allow_html=True)
-    except FileNotFoundError:
-        st.error(f"Nie znaleziono pliku z logo: {sciezka_do_pliku}")
-
-# Wywołanie funkcji
-dodaj_logo_w_rogu("background.jpg")
 
 # ==============================================================================
 # KONFIGURACJA STRONY STREAMLIT
