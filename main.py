@@ -426,8 +426,6 @@ def generuj_plan(profil, budzet, dni):
     dni_tygodnia = ["Poniedziałek", "Wtorek", "Środa", "Czwartek", "Piątek", "Sobota", "Niedziela"]
     
     if czy_split:
-        # Definiujemy prostą, klasyczną kolejność (tylko 1 partia na dzień)
-        if czy_split:
         # AKTUALIZACJA: Dodano Barki i Brzuch / Core do cyklu
         kolejnosc_gym = ["Klatka piersiowa", "Plecy", "Nogi", "Barki", "Ręce", "Pośladki", "Brzuch / Core"]
         kolejnosc_fizjo = ["Głowa/Szyja", "Kończyna górna", "Core (Tułów)", "Kończyna dolna"]
