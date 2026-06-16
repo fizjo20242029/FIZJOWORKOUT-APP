@@ -1078,8 +1078,35 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 with st.sidebar:
+    # --- NOWE, OSTRE I DUŻE LOGO Z ORYGINALNYMI KOLORAMI ---
+    try:
+        import base64
+        with open("background.jpg", "rb") as f:
+            zakodowane_logo = base64.b64encode(f.read()).decode()
+        
+        st.markdown(
+            f"""
+            <style>
+            .sidebar-logo-img {{
+                width: 100%;             /* Rozciąga logo na całą szerokość paska bocznego */
+                height: auto;            /* Zachowuje idealne proporcje */
+                margin-top: -60px;       /* Popycha logo na sam szczyt ekranu */
+                margin-bottom: 20px;     /* Daje oddech przed resztą menu */
+                border-radius: 8px;      /* Delikatnie zaokrągla rogi dla elegancji */
+                box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.15); /* Subtelny cień, żeby odrywało się od tła */
+            }}
+            </style>
+            <img src="data:image/jpeg;base64,{zakodowane_logo}" class="sidebar-logo-img">
+            """,
+            unsafe_allow_html=True
+        )
+    except FileNotFoundError:
+        st.error("Nie znaleziono pliku background.jpg")
+
     st.header("🔑 Dostęp do AI")
     user_api_key = st.text_input("Twój klucz API Groq:", type="password", help="Pobierz darmowy klucz ze strony console.groq.com")
+    
+    # ... (tutaj leci reszta Twojego kodu w sidebarze, np. st.caption, st.divider itd.) ...
     st.caption("Nie masz klucza? Pobierz go bezpłatnie ze strony: [console.groq.com](https://console.groq.com/)")
     groq_client = Groq(api_key=user_api_key) if user_api_key else None
 
