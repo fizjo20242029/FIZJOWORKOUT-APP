@@ -220,6 +220,33 @@ BAZA_SILOWNIA = {
         {"nazwa": "T-Bar Row (wiosłowanie T-Bar)", "opis": "POZYCJA: W opadzie, chwyt za uchwyty maszyny. RUCH: Przyciągaj ciężar do klatki. UWAGA: Pilnuj, by plecy były płaskie, nie zaokrąglaj się.", "czas_min": 3, "parametry": "4 serie x 10 powtórzeń", "miesnie": "Plecy"},
         {"nazwa": "Spacer farmera", "opis": "POZYCJA: Wyprostowana sylwetka, hantle w dłoniach. RUCH: Marsz krótkimi krokami, stabilizując tułów. UWAGA: Nie pozwól, aby ciężar ciągnął ramiona w dół, trzymaj barki aktywnie.", "czas_min": 3, "parametry": "3 serie x 30m", "miesnie": "Plecy, chwyt, core"}
     ],
+
+    "Barki": [
+        {"nazwa": "Wyciskanie żołnierskie (OHP)", "opis": "POZYCJA: Stojąc, sztanga na wysokości obojczyków, pośladki i brzuch mocno napięte. RUCH: Wyciśnij sztangę nad głowę, lekko cofając głowę. UWAGA: Nie wyginaj lędźwi w łuk, trzymaj sztywny core.", "czas_min": 3, "parametry": "4x8", "miesnie": "Naramienny przedni, triceps, core"},
+        {"nazwa": "Wyciskanie hantli siedząc", "opis": "POZYCJA: Siedząc na ławce (oparcie 75-80 stopni), hantle na wysokości uszu. RUCH: Wyciskaj hantle w górę, nie blokując łokci w szczycie. UWAGA: Prowadź łokcie lekko przed linią tułowia.", "czas_min": 3, "parametry": "4x10", "miesnie": "Naramienny przedni i boczny"},
+        {"nazwa": "Wznosy hantli bokiem", "opis": "POZYCJA: Stojąc, hantle wzdłuż ciała, łokcie minimalnie ugięte. RUCH: Unoś ramiona na boki do wysokości barków. UWAGA: Mały palec dłoni powinien być wyżej niż kciuk (jak przy wylewaniu wody z dzbanka).", "czas_min": 2, "parametry": "4x15", "miesnie": "Naramienny boczny"},
+        {"nazwa": "Wznosy hantli w opadzie tułowia", "opis": "POZYCJA: Opad tułowia, plecy proste, hantle zwisają swobodnie. RUCH: Unoś ramiona szeroko na boki, spinając tył barków. UWAGA: Nie używaj pędu, ruch ma być izolowany.", "czas_min": 2, "parametry": "4x15", "miesnie": "Naramienny tylny, czworoboczny"},
+        {"nazwa": "Face Pulls z liną wyciągu", "opis": "POZYCJA: Stojąc, wyciąg ustawiony na wysokości twarzy. RUCH: Przyciągaj linę do czoła, mocno rotując ramiona na zewnątrz w końcowej fazie. UWAGA: Skup się na ściągnięciu łopatek i napięciu tyłu barków.", "czas_min": 2, "parametry": "3x15", "miesnie": "Naramienny tylny, stożek rotatorów"},
+        {"nazwa": "Wyciskanie Arnolda", "opis": "POZYCJA: Siedząc, hantle przed twarzą, wnętrza dłoni skierowane do siebie. RUCH: Wyciskaj hantle w górę, jednocześnie rotując nadgarstki na zewnątrz. UWAGA: Płynny ruch łączący pracę przodu i boku barku.", "czas_min": 3, "parametry": "3x12", "miesnie": "Naramienne (całość)"},
+        {"nazwa": "Podciąganie sztangi wzdłuż tułowia", "opis": "POZYCJA: Stojąc, szeroki chwyt sztangi. RUCH: Podciągaj sztangę do linii klatki piersiowej, prowadząc łokcie wysoko w górę. UWAGA: Zbyt wąski chwyt może obciążać stawy barkowe.", "czas_min": 3, "parametry": "3x12", "miesnie": "Naramienny boczny, czworoboczny"},
+        {"nazwa": "Wznosy bokiem na wyciągu jednorącz", "opis": "POZYCJA: Stojąc bokiem do wyciągu dolnego, linka trzymana w przeciwnej ręce (za plecami lub przed). RUCH: Unoś ramię w bok. UWAGA: Linka zapewnia stałe napięcie mięśnia przez cały ruch.", "czas_min": 2, "parametry": "3x15", "miesnie": "Naramienny boczny"},
+        {"nazwa": "Szrugsy ze sztangą / hantlami", "opis": "POZYCJA: Stojąc prosto, ciężar w opuszczonych rękach. RUCH: Wykonuj wzruszenia barkami w górę. UWAGA: Tylko ruch pionowy (góra-dół), nie wykonuj krążeń barkami.", "czas_min": 2, "parametry": "4x15", "miesnie": "Czworoboczny (kaptury)"},
+        {"nazwa": "Odwrotne rozpiętki na maszynie (Reverse Pec Deck)", "opis": "POZYCJA: Siedząc przodem do maszyny, ręce wyprostowane przed sobą. RUCH: Odwodź ramiona maksymalnie w tył. UWAGA: Skup się na pracy tyłu barku, a nie całych pleców.", "czas_min": 2, "parametry": "3x15", "miesnie": "Naramienny tylny"}
+    ],
+    
+    "Brzuch / Core": [
+        {"nazwa": "Allahy (Skłony na wyciągu górnym)", "opis": "POZYCJA: Klęcząc tyłem lub przodem do wyciągu, chwyć linę za głową. RUCH: Zwijaj tułów (jak przy brzuszkach), przyciągając klatkę do miednicy. UWAGA: Ruch ma zachodzić w kręgosłupie, to nie jest skłon w biodrach.", "czas_min": 2, "parametry": "4x15", "miesnie": "Prosty brzucha"},
+        {"nazwa": "Ab Wheel (Kółko rehabilitacyjne)", "opis": "POZYCJA: Klęk podparty, dłonie na kółku. RUCH: Wyjeżdżaj kółkiem w przód, napinając mocno brzuch, i wracaj. UWAGA: Nie pozwól, aby lędźwia zapadły się w dół (hiperlordoza).", "czas_min": 3, "parametry": "3x10", "miesnie": "Prosty brzucha, core"},
+        {"nazwa": "Wznosy nóg w zwisie na drążku", "opis": "POZYCJA: Zwis swobodny na drążku. RUCH: Unoś proste nogi (lub ugięte kolana) w stronę klatki piersiowej. UWAGA: Staraj się podwinąć miednicę w górnej fazie ruchu, unikaj huśtania.", "czas_min": 2, "parametry": "3xMax", "miesnie": "Dół brzucha, biodrowo-lędźwiowy"},
+        {"nazwa": "Plank (Deska) z obciążeniem", "opis": "POZYCJA: Podpór na przedramionach, talerz ułożony na plecach. RUCH: Utrzymuj sztywną linię ciała. UWAGA: Napnij mocno pośladki i wciągnij pępek.", "czas_min": 2, "parametry": "3x45 sekund", "miesnie": "Core (stabilizacja globalna)"},
+        {"nazwa": "Russian Twist z obciążeniem", "opis": "POZYCJA: Siad, nogi uniesione, kettlebell lub talerz w dłoniach. RUCH: Skręcaj tułów, przenosząc ciężar z jednej strony na drugą. UWAGA: Wzrok i klatka piersiowa podążają za ciężarem.", "czas_min": 2, "parametry": "3x20 (na stronę)", "miesnie": "Mięśnie skośne brzucha"},
+        {"nazwa": "Woodchopper na wyciągu", "opis": "POZYCJA: Stojąc bokiem do wyciągu górnego. RUCH: Ciągnij uchwyt po przekątnej z góry na dół (jak przy rąbaniu drewna), rotując tułów. UWAGA: Trzymaj ręce względnie proste, pracuj rotacją tułowia.", "czas_min": 2, "parametry": "3x12 (na stronę)", "miesnie": "Skośne brzucha, core"},
+        {"nazwa": "Dead Bug (Martwy robak) z hantlami", "opis": "POZYCJA: Leżenie tyłem, ręce i nogi w górze, lędźwia wciśnięte w matę. RUCH: Opuszczaj naprzemiennie przeciwną rękę i nogę. UWAGA: Jeśli lędźwia odrywają się od podłogi, nie opuszczaj nóg tak nisko.", "czas_min": 2, "parametry": "3x12 (na stronę)", "miesnie": "Core, poprzeczny brzucha"},
+        {"nazwa": "Świeca (Dragon Flag - wersja uproszczona)", "opis": "POZYCJA: Leżenie tyłem na ławce, dłonie trzymają ławkę za głową. RUCH: Unoś spięte, proste ciało w górę, opierając się tylko na barkach, następnie powoli opuszczaj. UWAGA: Maksymalne napięcie całego ciała.", "czas_min": 3, "parametry": "3x8", "miesnie": "Prosty brzucha (całość)"},
+        {"nazwa": "Spacer farmera jednorącz", "opis": "POZYCJA: Stojąc, ciężki hantel / kettlebell w jednej dłoni. RUCH: Marsz z zachowaniem idealnie pionowej sylwetki. UWAGA: Mięśnie core muszą mocno pracować, by zapobiec wygięciu tułowia w stronę ciężaru.", "czas_min": 3, "parametry": "3x40 metrów (na stronę)", "miesnie": "Skośne brzucha, czworoboczny lędźwi"},
+        {"nazwa": "Pallof Press (Wyciskanie z gumą)", "opis": "POZYCJA: Stojąc bokiem do wyciągu lub gumy na wysokości klatki, uchwyt w dłoniach na mostku. RUCH: Wyciskaj uchwyt prosto przed siebie i przytrzymaj. UWAGA: Walcz z siłą rotacyjną, która chce Cię skręcić w stronę wyciągu.", "czas_min": 2, "parametry": "3x12 (na stronę)", "miesnie": "Core (antyrotacja)"}
+    ],
+    
     "Ręce": [
         {"nazwa": "Uginanie sztangi łamanej", "opis": "POZYCJA: Stojąc, chwyć sztangę podchwytem na szerokość barków. RUCH: Uginaj ramiona w łokciach, prowadząc gryf w stronę klatki piersiowej. UWAGA: Łokcie muszą pozostać w jednej pozycji przy tułowiu, nie wykonuj zamachu tułowiem.", "czas_min": 2, "parametry": "3x12", "miesnie": "Biceps, m. ramienny"},
         {"nazwa": "Uginanie hantli z supinacją", "opis": "POZYCJA: Stojąc z hantlami w dłoniach, chwyt neutralny. RUCH: Uginaj ramię, jednocześnie obracając nadgarstek na zewnątrz (dłoń do góry). UWAGA: Rotacja następuje w trakcie ruchu, nie na końcu.", "czas_min": 2, "parametry": "3x12", "miesnie": "Biceps"},
@@ -400,8 +427,12 @@ def generuj_plan(profil, budzet, dni):
     
     if czy_split:
         # Definiujemy prostą, klasyczną kolejność (tylko 1 partia na dzień)
-        kolejnosc_gym = ["Klatka piersiowa", "Plecy", "Nogi", "Ręce", "Pośladki"]
+        if czy_split:
+        # AKTUALIZACJA: Dodano Barki i Brzuch / Core do cyklu
+        kolejnosc_gym = ["Klatka piersiowa", "Plecy", "Nogi", "Barki", "Ręce", "Pośladki", "Brzuch / Core"]
         kolejnosc_fizjo = ["Głowa/Szyja", "Kończyna górna", "Core (Tułów)", "Kończyna dolna"]
+        
+        # reszta kodu pozostaje bez zmian...
 
         plan_na_dni = []
         for i in range(rzeczywista_liczba_dni):
@@ -470,7 +501,8 @@ def generuj_plan(profil, budzet, dni):
         else:
             if is_gym:
                 if "Ogólnorozwojowy" in profil:
-                    for p in ["Klatka piersiowa", "Plecy", "Nogi", "Ręce", "Pośladki"]:
+                    # AKTUALIZACJA: Pełen przegląd partii FBW
+                    for p in ["Klatka piersiowa", "Plecy", "Nogi", "Barki", "Ręce", "Pośladki", "Brzuch / Core"]:
                         dodano = 0
                         while dodano < budzet:
                             cw = pop_random(b_gym, p)
@@ -1067,10 +1099,13 @@ with st.sidebar:
         "🟦 GYM: Ogólnorozwojowy (FBW - Całe Ciało)",
         "🟦 GYM: Automatyczny Split (Dni Tygodnia)",
         "🟦 GYM: Ukierunkowany - Klatka piersiowa",
-        "🟦 GYM: Ukierunkowany - Ręce",
         "🟦 GYM: Ukierunkowany - Plecy",
+        "🟦 GYM: Ukierunkowany - Barki",
+        "🟦 GYM: Ukierunkowany - Ręce",
         "🟦 GYM: Ukierunkowany - Nogi",
-        "🟦 GYM: Ukierunkowany - Pośladki"
+        "🟦 GYM: Ukierunkowany - Pośladki",
+        "🟦 GYM: Ukierunkowany - Brzuch / Core"
+    ])
     ])
     
     is_gym = "GYM:" in profil
