@@ -392,6 +392,10 @@ def generuj_plan(profil, budzet, dni):
     dni_tygodnia = ["Poniedziałek", "Wtorek", "Środa", "Czwartek", "Piątek", "Sobota", "Niedziela"]
     
     if czy_split:
+        # Definiujemy złoty standard - pełne 7-dniowe cykle, które będą się powtarzać
+        cykl_7_dni_gym = [["Klatka piersiowa"], ["Plecy"], ["Nogi"], ["Ręce"], ["Pośladki"], ["Klatka piersiowa", "Ręce"], ["Plecy", "Nogi"]]
+        cykl_7_dni_fizjo = [["Głowa/Szyja"], ["Kończyna górna"], ["Core (Tułów)"], ["Kończyna dolna"], ["Kończyna górna"], ["Core (Tułów)"], ["Kończyna dolna"]]
+
         if is_gym:
             uklady = {
                 1: [["Klatka piersiowa", "Plecy", "Nogi", "Ręce", "Pośladki"]],
@@ -399,25 +403,31 @@ def generuj_plan(profil, budzet, dni):
                 3: [["Klatka piersiowa", "Ręce"], ["Nogi", "Pośladki"], ["Plecy"]],
                 4: [["Ręce"], ["Klatka piersiowa"], ["Nogi"], ["Plecy"]],
                 5: [["Klatka piersiowa"], ["Plecy"], ["Nogi"], ["Ręce"], ["Pośladki"]],
-                6: [["Klatka piersiowa"], ["Plecy"], ["Nogi"], ["Ręce"], ["Pośladki"], ["Klatka piersiowa", "Plecy"]],
-                7: [["Klatka piersiowa"], ["Plecy"], ["Nogi"], ["Ręce"], ["Pośladki"], ["Klatka piersiowa"], ["Plecy", "Nogi"]]
+                6: [["Klatka piersiowa"], ["Plecy"], ["Nogi"], ["Ręce"], ["Pośladki"], ["Klatka piersiowa", "Plecy"]]
             }
+            # Jeśli wybrano 6 lub mniej dni, bierzemy układ ze słownika. Jeśli 7 i więcej - zapętlamy cykl 7-dniowy.
+            if rzeczywista_liczba_dni <= 6:
+                plan_na_dni = uklady[rzeczywista_liczba_dni]
+            else:
+                plan_na_dni = [cykl_7_dni_gym[i % 7] for i in range(rzeczywista_liczba_dni)]
         else:
             uklady = {
                 1: [["Głowa/Szyja", "Kończyna górna", "Core (Tułów)", "Kończyna dolna"]],
                 2: [["Kończyna górna", "Głowa/Szyja"], ["Kończyna dolna", "Core (Tułów)"]],
                 3: [["Kończyna górna", "Głowa/Szyja"], ["Core (Tułów)"], ["Kończyna dolna"]],
-                4: [["Głowa/Szyja"], ["Kończyna górna"], ["Core (Tułów)"], ["Kończyna dolna"]],
+                4: [["Głowa/Szyja"], ["Kończyna górna"], ["Core (Tułów)", "Kończyna dolna"]],
                 5: [["Głowa/Szyja"], ["Kończyna górna"], ["Core (Tułów)"], ["Kończyna dolna"], ["Core (Tułów)", "Kończyna górna"]],
-                6: [["Głowa/Szyja"], ["Kończyna górna"], ["Core (Tułów)"], ["Kończyna dolna"], ["Kończyna górna"], ["Core (Tułów)"]],
-                7: [["Głowa/Szyja"], ["Kończyna górna"], ["Core (Tułów)"], ["Kończyna dolna"], ["Kończyna górna"], ["Core (Tułów)"], ["Kończyna dolna"]]
+                6: [["Głowa/Szyja"], ["Kończyna górna"], ["Core (Tułów)"], ["Kończyna dolna"], ["Kończyna górna"], ["Core (Tułów)"]]
             }
-        plan_na_dni = uklady.get(rzeczywista_liczba_dni, uklady[7][:rzeczywista_liczba_dni])
+            if rzeczywista_liczba_dni <= 6:
+                plan_na_dni = uklady[rzeczywista_liczba_dni]
+            else:
+                plan_na_dni = [cykl_7_dni_fizjo[i % 7] for i in range(rzeczywista_liczba_dni)]
 
     for i in range(rzeczywista_liczba_dni):
         if czy_wielo_dniowy:
             if czy_split:
-                dzien = dni_tygodnia[i]
+                dzien = dni_tygodnia[i % 7]
                 partie = plan_na_dni[i]
                 partie_str = ' + '.join([p.upper() for p in partie])
                 nazwa_dnia = f"{dzien}: {partie_str}"
@@ -1060,7 +1070,7 @@ with st.sidebar:
     czy_wielo_dniowy = czy_split or "Kompleksowy" in profil
     
     budzet = st.number_input("Ilość ćw. NA PARTIĘ:" if is_gym else "Budżet czasu (min):", min_value=1, max_value=120, value=4 if is_gym else 45)
-    dni = st.number_input("Liczba dni (tylko dla Split/Kompleksowy):", min_value=1, max_value=7, value=4, disabled=not czy_wielo_dniowy)
+    dni = st.number_input("Liczba dni (tylko dla Split/Kompleksowy):", min_value=1, max_value=31, value=4, disabled=not czy_wielo_dniowy)
     
     if st.button("⚡ GENERUJ AUTOMAT", use_container_width=True, type="primary"):
         generuj_plan(profil, budzet, dni)
