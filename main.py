@@ -377,6 +377,13 @@ def generuj_plan(profil, budzet, dni):
     b_gym = {k: list(v) for k, v in BAZA_SILOWNIA.items()}
 
     def pop_random(baza, kat):
+        # NOWOŚĆ: Jeśli wyczerpaliśmy wszystkie ćwiczenia dla tej partii, odnawiamy pulę z bazy głównej (tasujemy talię)
+        if kat in baza and len(baza[kat]) == 0:
+            if kat in BAZA_FIZJO:
+                baza[kat] = list(BAZA_FIZJO[kat])
+            elif kat in BAZA_SILOWNIA:
+                baza[kat] = list(BAZA_SILOWNIA[kat])
+
         if baza.get(kat) and len(baza[kat]) > 0:
             idx = random.randint(0, len(baza[kat])-1)
             cw = baza[kat].pop(idx).copy()
