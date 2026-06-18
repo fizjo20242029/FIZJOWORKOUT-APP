@@ -12,6 +12,130 @@ from openpyxl.utils import get_column_letter
 import streamlit as st
 from groq import Groq
 
+import sqlite3
+import json
+from datetime import datetime
+
+DB_NAME = "fizjo_workout.db"
+
+def inicjalizuj_baze():
+    """Tworzy strukturę tabel w bazie danych, jeśli jeszcze nie istnieją."""
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    
+    # 1. Tabela pacjentów
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS pacjenci (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            imie TEXT NOT NULL,
+            nazwisko TEXT NOT NULL,
+            wiek INTEGER,
+            telefon TEXT,
+            email TEXT,
+            cel_terapii TEXT,
+            przeciwwskazania TEXT,
+            data_rejestracji TEXT
+        )
+    """)
+    
+    # 2. Tabela historii wizyt / notatek
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS historia_wizyt (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            pacjent_id INTEGER,
+            data_wizyty TEXT,
+            notatka TEXT,
+            FOREIGN KEY (pacjent_id) REFERENCES pacjenci(id) ON DELETE CASCADE
+        )
+    """)
+    
+    # 3. Tabela zapisanych planów treningowych
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS zapisane_plany (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            pacjent_id INTEGER,
+            data_zapisu TEXT,
+            profil_planu TEXT,
+            plan_json TEXT,
+            FOREIGN KEY (pacjent_id) REFERENCES pacjenci(id) ON DELETE CASCADE
+        )
+    """)
+    
+    conn.commit()
+    conn.close()
+
+# Wywołujemy funkcję inicjalizacji przy starcie aplikacji
+inicjalizuj_baze()
+
+# ==============================================================================
+# FUNKCJE OPERACJI NA BAZIE (CRUD)
+# ==============================================================================
+
+def dodaj_pacjenta(imie, nazwisko, wiek, telefon, email, cel, przeciwwskazania):
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    data_teraz = datetime.now().strftime("%Y-%m-%d %H:%M")
+    cursor.execute("""
+        INSERT INTO pacjenci (imie, nazwisko, wiek, telefon, email, cel_terapii, przeciwwskazania, data_rejestracji)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    """, (imie, nazwisko, wiek, telefon, email, cel, przeciwwskazania, data_teraz))
+    conn.commit()
+    conn.close()
+
+def pobierz_wszystkich_pacjentów(szukaj_fraza=""):
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    if szukaj_fraza:
+        cursor.execute("""
+            SELECT id, imie, nazwisko FROM pacjenci 
+            WHERE imie LIKE ? OR nazwisko LIKE ?
+            ORDER BY nazwisko ASC
+        """, (f"%{szukaj_fraza}%", f"%{szukaj_fraza}%"))
+    else:
+        cursor.execute("SELECT id, imie, nazwisko FROM pacjenci ORDER BY nazwisko ASC")
+    wyszukani = cursor.fetchall()
+    conn.close()
+    return wyszukani
+
+def pobierz_szczegoly_pacjenta(pacjent_id):
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM pacjenci WHERE id = ?", (pacjent_id,))
+    pacjent = cursor.fetchone()
+    
+    # Pobierz historię notatek
+    cursor.execute("SELECT data_wizyty, notatka FROM historia_wizyt WHERE pacjent_id = ? ORDER BY id DESC", (pacjent_id,))
+    notatki = cursor.fetchall()
+    
+    # Pobierz historię planów
+    cursor.execute("SELECT id, data_zapisu, profil_planu, plan_json FROM zapisane_plany WHERE pacjent_id = ? ORDER BY id DESC", (pacjent_id,))
+    plany = cursor.fetchall()
+    
+    conn.close()
+    return pacjent, notatki, plany
+
+def dodaj_notatke_wizyty(pacjent_id, notatka):
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    data_teraz = datetime.now().strftime("%Y-%m-%d %H:%M")
+    cursor.execute("INSERT INTO historia_wizyt (pacjent_id, data_wizyty, notatka) VALUES (?, ?, ?)", (pacjent_id, data_teraz, notatka))
+    conn.commit()
+    conn.close()
+
+def zapisz_plan_pacjenta(pacjent_id, profil_planu, lista_plan_cache):
+    """Konwertuje listę ćwiczeń (cache) na format JSON i zapisuje w bazie."""
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    data_teraz = datetime.now().strftime("%Y-%m-%d %H:%M")
+    # Zamiana struktury Pythona na tekst tekstowy JSON
+    plan_tekst_json = json.dumps(lista_plan_cache, ensure_ascii=False)
+    
+    cursor.execute("""
+        INSERT INTO zapisane_plany (pacjent_id, data_zapisu, profil_planu, plan_json)
+        VALUES (?, ?, ?, ?)
+    """, (pacjent_id, data_teraz, profil_planu, plan_tekst_json))
+    conn.commit()
+    conn.close()
 
 # ==============================================================================
 # KONFIGURACJA STRONY STREAMLIT
@@ -1117,7 +1241,9 @@ with st.sidebar:
                 st.error(f"Błąd Excel FIZJO: {e}")
                 st.code(traceback.format_exc())
 # ZAKŁADKI GŁÓWNE
-tab1, tab2, tab_protokoly, tab3, tab4 = st.tabs(["📝 Twój Plan", "➕ Kreator", "🏥 Protokoły Kliniczne", "✨ Asystent AI", "⚙️ Baza Ćwiczeń"])
+tab1, tab_pacjenci, tab2, tab_protokoly, tab3, tab4 = st.tabs([
+    "📝 Twój Plan", "👥 Karta Pacjenta", "➕ Kreator", "🏥 Protokoły Kliniczne", "✨ Asystent AI", "⚙️ Baza Ćwiczeń"
+])
 
 # ZAKŁADKA 1: WYGENEROWANY PLAN
 # ZAKŁADKA 1: WYGENEROWANY PLAN
@@ -1216,6 +1342,117 @@ with tab1:
                             
                 licznik += 1
                 abs_idx += 1
+
+# ZAKŁADKA: KARTA I BAZA PACJENTÓW
+with tab_pacjenci:
+    st.subheader("Zarządzanie Kartotekami Podopiecznych")
+    
+    lewa_strona, prawa_strona = st.columns([2, 3])
+    
+    with lewa_strona:
+        st.markdown("### 🔍 Szukaj lub Dodaj")
+        szukaj_p = st.text_input("Wpisz imię lub nazwisko:", key="szukaj_pacjenta_input")
+        lista_p = pobierz_wszystkich_pacjentów(szukaj_p)
+        
+        # Formatowanie listy do selectboxa
+        opcje_pacjentow = {f"{p[2]} {p[1]} (ID: {p[0]})": p[0] for p in lista_p}
+        
+        if opcje_pacjentow:
+            wybrany_pacjent_etykieta = st.selectbox("Wybierz profil z bazy:", list(opcje_pacjentow.keys()))
+            wybrany_pacjent_id = opcje_pacjentow[wybrany_pacjent_etykieta]
+        else:
+            st.info("Brak pasujących profili.")
+            wybrany_pacjent_id = None
+            
+        st.divider()
+        # Formularz zakładania nowej karty
+        with st.expander("➕ Otwórz nową kartę pacjenta", expanded=False):
+            with st.form("form_nowy_pacjent", clear_on_submit=True):
+                p_imie = st.text_input("Imię:")
+                p_nazwisko = st.text_input("Nazwisko:")
+                p_wiek = st.number_input("Wiek:", min_value=1, max_value=110, value=30)
+                p_tel = st.text_input("Telefon:")
+                p_email = st.text_input("E-mail:")
+                p_cel = st.text_area("Główne rozpoznanie / Cel współpracy:")
+                p_przeciw = st.text_area("Przeciwwskazania / Uwagi kliniczne:")
+                
+                if st.form_submit_button("Utwórz kartę w bazie", type="primary"):
+                    if p_imie and p_nazwisko:
+                        dodaj_pacjenta(p_imie, p_nazwisko, p_wiek, p_tel, p_email, p_cel, p_przeciw)
+                        st.success(f"Pomyślnie założono kartę dla: {p_imie} {p_nazwisko}!")
+                        st.rerun()
+                    else:
+                        st.error("Imię i nazwisko są wymagane.")
+
+    with prawa_strona:
+        if wybrany_pacjent_id:
+            pacjent, notatki, plany = pobierz_szczegoly_pacjenta(wybrany_pacjent_id)
+            
+            # Wyświetlanie profilu pacjenta
+            st.markdown(f"### 👤 {pacjent[2]} {pacjent[1]}")
+            
+            c_metryka1, c_metryka2 = st.columns(2)
+            c_metryka1.markdown(f"**Wiek:** {pacjent[3]} lat  \n**Telefon:** {pacjent[4]}  \n**E-mail:** {pacjent[5]}")
+            c_metryka2.markdown(f"**Zarejestrowano:** {pacjent[8]}")
+            
+            st.markdown(f"📋 **Rozpoznanie / Cel:** \n{pacjent[6]}")
+            if pacjent[7]:
+                st.warning(f"⚠️ **Przeciwwskazania:** {pacjent[7]}")
+                
+            st.divider()
+            
+            # AKCJA: Przypisywanie wygenerowanego właśnie planu
+            st.markdown("#### 🛠️ Akcje na koncie")
+            if st.session_state.wylosowany_plan_cache:
+                if st.button("💾 Przypisz aktualnie wygenerowany plan do tej karty", use_container_width=True, type="primary"):
+                    zapisz_plan_pacjenta(wybrany_pacjent_id, profil, st.session_state.wylosowany_plan_cache)
+                    st.success("Plan został trwale zapisany w historii pacjenta!")
+                    st.rerun()
+            else:
+                st.caption("💡 Wygeneruj najpierw program w generatorze (panel boczny), aby móc go przypisać do tego pacjenta.")
+                
+            # Nowa notatka z wizyty
+            with st.popover("📝 Dodaj nową notatkę z dzisiejszej wizyty", use_container_width=True):
+                tekst_notatki = st.text_area("Treść wpisu (np. rano mniejsza sztywność, ból 2/10):")
+                if st.button("Zapisz wpis", type="primary"):
+                    if tekst_notatki:
+                        dodaj_notatke_wizyty(wybrany_pacjent_id, tekst_notatki)
+                        st.success("Notatka dodana!")
+                        st.rerun()
+
+            # HISTORIA HISTORII WIZYT I PLANÓW (Chronologiczna oś czasu)
+            sub_tab_notatki, sub_tab_plany = st.tabs(["📑 Historia wpisów", "🏋️ Zapisane programy ({})".format(len(plany))])
+            
+            with sub_tab_notatki:
+                if not notatki:
+                  st.info("Brak wpisów w historii.")
+                for data, notatka in notatki:
+                    st.markdown(f"**📅 {data}**")
+                    st.info(notatka)
+                    
+            with sub_tab_plany:
+                if not plany:
+                    st.info("Ten pacjent nie ma jeszcze zapisanych planów.")
+                for p_id, data_z, prof, p_json in plany:
+                    with st.expander(f"📦 Plan z dnia {data_z} ({prof.split(': ')[1] if ':' in prof else prof})"):
+                        
+                        # Przycisk do wczytania starego planu z powrotem na ekran główny aplikacji!
+                        if st.button("🔄 Wczytaj ten plan na ekran główny jako aktywny", key=f"load_p_{p_id}"):
+                            st.session_state.wylosowany_plan_cache = json.loads(p_json)
+                            st.toast("Wczytano plan! Przejdź do zakładki 'Twój Plan'.")
+                            st.rerun()
+                        
+                        # Szybki podgląd listy ćwiczeń
+                        odkodowany_plan = json.loads(p_json)
+                        counter = 1
+                        for kat, cw in odkodowany_plan:
+                            if kat != "NAGŁÓWEK DNIA":
+                                st.text(f"{counter}. [{kat}] {cw['nazwa']} -> {cw['parametry']}")
+                                counter += 1
+                            else:
+                                st.markdown(f"**{cw['nazwa']}**")
+        else:
+            st.info("👈 Wybierz pacjenta z listy po lewej stronie lub załóż nową kartę, aby wyświetlić pełną dokumentację medyczną.")
 
 # ZAKŁADKA 2: KREATOR MANUALNY
 with tab2:
