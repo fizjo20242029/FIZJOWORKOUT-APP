@@ -137,6 +137,26 @@ def zapisz_plan_pacjenta(pacjent_id, profil_planu, lista_plan_cache):
     conn.commit()
     conn.close()
 
+def aktualizuj_pacjenta(pacjent_id, imie, nazwisko, wiek, telefon, email, cel, przeciwwskazania):
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute("""
+        UPDATE pacjenci 
+        SET imie = ?, nazwisko = ?, wiek = ?, telefon = ?, email = ?, cel_terapii = ?, przeciwwskazania = ?
+        WHERE id = ?
+    """, (imie, nazwisko, wiek, telefon, email, cel, przeciwwskazania, pacjent_id))
+    conn.commit()
+    conn.close()
+
+def usun_pacjenta(pacjent_id):
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    # Dzięki 'ON DELETE CASCADE' w definicji tabeli, baza automatycznie
+    # usunie też wszystkie przypisane do niego notatki i plany!
+    cursor.execute("DELETE FROM pacjenci WHERE id = ?", (pacjent_id,))
+    conn.commit()
+    conn.close()
+
 # ==============================================================================
 # KONFIGURACJA STRONY STREAMLIT
 # ==============================================================================
@@ -1398,6 +1418,32 @@ with tab_pacjenci:
             st.markdown(f"📋 **Rozpoznanie / Cel:** \n{pacjent[6]}")
             if pacjent[7]:
                 st.warning(f"⚠️ **Przeciwwskazania:** {pacjent[7]}")
+                # --- ZARZĄDZANIE PROFILEM (EDYTUJ / USUŃ) ---
+            with st.expander("⚙️ Zarządzaj kartoteką (Edycja / Usuwanie)"):
+                tab_edycja, tab_usun = st.tabs(["✏️ Edytuj dane", "🗑️ Usuń kartotekę"])
+                
+                with tab_edycja:
+                    with st.form(f"form_edycja_{wybrany_pacjent_id}"):
+                        e_imie = st.text_input("Imię:", value=pacjent[1])
+                        e_nazwisko = st.text_input("Nazwisko:", value=pacjent[2])
+                        e_wiek = st.number_input("Wiek:", min_value=1, max_value=110, value=int(pacjent[3] or 30))
+                        e_tel = st.text_input("Telefon:", value=pacjent[4] or "")
+                        e_email = st.text_input("E-mail:", value=pacjent[5] or "")
+                        e_cel = st.text_area("Główne rozpoznanie / Cel:", value=pacjent[6] or "")
+                        e_przeciw = st.text_area("Przeciwwskazania:", value=pacjent[7] or "")
+                        
+                        if st.form_submit_button("💾 Zapisz zmiany", type="primary"):
+                            aktualizuj_pacjenta(wybrany_pacjent_id, e_imie, e_nazwisko, e_wiek, e_tel, e_email, e_cel, e_przeciw)
+                            st.success("Zaktualizowano profil pacjenta!")
+                            st.rerun()
+                            
+                with tab_usun:
+                    st.error("⚠️ Uwaga! Usunięcie pacjenta bezpowrotnie skasuje całą jego historię wizyt oraz wygenerowane plany treningowe.")
+                    if st.button("🗑️ Rozumiem, trwale usuń pacjenta", type="secondary", use_container_width=True):
+                        usun_pacjenta(wybrany_pacjent_id)
+                        st.toast("Pacjent został usunięty z bazy.")
+                        st.rerun()
+            # --- KONIEC ZARZĄDZANIA PROFILEM ---
                 
             st.divider()
             
