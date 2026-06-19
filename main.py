@@ -164,6 +164,38 @@ if 'historia_wiadomosci' not in st.session_state:
     ]
 
 # ==============================================================================
+# MODYFIKATOR KLINICZNY (INTELIGENTNE NADPISYWANIE PARAMETRÓW)
+# ==============================================================================
+def zastosuj_modyfikator_kliniczny(wylosowany_plan, kontekst):
+    if "Standardowy" in kontekst:
+        return wylosowany_plan
+
+    zmodyfikowany_plan = []
+    for kat, cw in wylosowany_plan:
+        if kat == "NAGŁÓWEK DNIA" or not isinstance(cw, dict):
+            zmodyfikowany_plan.append((kat, cw))
+            continue
+            
+        cw_copy = cw.copy() 
+        
+        if "🫀 Kardiologiczny" in kontekst:
+            cw_copy['parametry'] = "3x 15 powt. (HR < 120, bez zadyszki)"
+            if 'opis' in cw_copy: cw_copy['opis'] += " [WAŻNE KARDIO: Kategorycznie unikaj wstrzymywania oddechu (Próby Valsalvy) podczas wysiłku! Oddychaj miarowo.]"
+        elif "👵 Geriatryczny" in kontekst:
+            cw_copy['parametry'] = "2-3x 10-12 powt. (Bardzo wolne tempo)"
+            if 'opis' in cw_copy: cw_copy['opis'] += " [GERIATRIA: Priorytetem jest stabilność i bezpieczeństwo. Wykonuj w asekuracji lub przy oparciu.]"
+        elif "🧠 Neurologiczny" in kontekst:
+            if 'opis' in cw_copy: cw_copy['opis'] += " [NEURO: Pełne skupienie na czuciu ruchu. Wolna faza ekscentryczna, pracuj nad płynnością.]"
+        elif "🦴 Ortopedyczny" in kontekst:
+            cw_copy['parametry'] = "3x 8-10 powt. (Zakres bezbólowy)"
+            if 'opis' in cw_copy: cw_copy['opis'] += " [ORTOPEDIA (OSTRE): Praca bezwzględnie w bezbólowym zakresie ruchu. Nie prowokuj bólu!]"
+                
+        zmodyfikowany_plan.append((kat, cw_copy))
+        
+    return zmodyfikowany_plan
+
+
+# ==============================================================================
 # BAZA FIZJOTERAPEUTYCZNA
 # ==============================================================================
 BAZA_FIZJO = {
@@ -1156,6 +1188,20 @@ with st.sidebar:
     groq_client = Groq(api_key=user_api_key) if user_api_key else None
 
     st.divider()
+
+
+    # To wrzucasz na samej górze wewnątrz 'with st.sidebar:'
+    wybrany_modyfikator = st.selectbox(
+        "Kliniczny modyfikator parametrów (Opcjonalne):",
+        [
+            "Standardowy (Domyślne parametry z bazy)",
+            "🫀 Kardiologiczny (Więcej powt., kontrola oddechu)",
+            "👵 Geriatryczny (Bezpieczeństwo, mniejsza objętość)",
+            "🧠 Neurologiczny (Skupienie na kontroli motorycznej)",
+            "🦴 Ortopedyczny (Stany ostre/bólowe)"
+        ]
+    )
+    st.divider() # Estetyczna linia oddzielająca
     st.header("⚙️ Konfiguracja")
     
     st.markdown("""
@@ -1203,8 +1249,15 @@ with st.sidebar:
     budzet = st.number_input("Ilość ćw. NA PARTIĘ:" if is_gym else "Budżet czasu (min):", min_value=1, max_value=120, value=4 if is_gym else 45)
     dni = st.number_input("Liczba dni (tylko dla Split/Kompleksowy):", min_value=1, max_value=31, value=4, disabled=not czy_wielo_dniowy)
     
-    if st.button("⚡ GENERUJ AUTOMAT", use_container_width=True, type="primary"):
-        generuj_plan(profil, budzet, dni)
+    if st.button("Generuj Plan Fizjo"):
+        # 1. Losuje plan normalnie
+        surowy_plan = generuj_plan_fizjo(wybrane_kategorie, liczba_dni) 
+        
+        # 2. PRZEPUSZCZA PRZEZ FILTR (TO JEST TA NOWA LINIJKA!)
+        plan_po_filtrze = zastosuj_modyfikator_kliniczny(surowy_plan, wybrany_modyfikator)
+        
+        # 3. Zapisuje gotowy, zmodyfikowany plan do pamięci aplikacji
+        st.session_state.wylosowany_plan_cache = plan_po_filtrze 
         st.rerun()
         
     if st.button("❌ CZYŚĆ EKRAN (RESET)", use_container_width=True):
