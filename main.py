@@ -1362,7 +1362,7 @@ with tab_pacjenci:
     with lewa_strona:
         st.markdown("### 🔍 Szukaj lub Dodaj")
         szukaj_p = st.text_input("Wpisz imię lub nazwisko:", key="szukaj_pacjenta_input")
-        lista_p = pobierz_wszystkich_pacjentów(szukaj_p)
+        lista_p = pobierz_wszystkich_pacjentow(szukaj_p)  # Zmieniono 'ó' na 'o')
         
         # Formatowanie listy do selectboxa
         opcje_pacjentow = {f"{p[2]} {p[1]} (ID: {p[0]})": p[0] for p in lista_p}
