@@ -21,76 +21,57 @@ from datetime import datetime
 
 DB_NAME = "fizjo_workout.db"
 
+# ==============================================================================
+# BAZA DANYCH PACJENTÓW (SQLITE) - WERSJA DLA WIELU UŻYTKOWNIKÓW
+# ==============================================================================
+import sqlite3
+import json
+from datetime import datetime
+
+# Funkcja dynamicznie przydzielająca plik bazy na podstawie loginu
+def get_db_name():
+    user = st.session_state.get("zalogowany_terapeuta", "domyslny")
+    return f"baza_pacjentow_{user}.db"
+
 def inicjalizuj_baze():
-    conn = sqlite3.connect(DB_NAME)
+    conn = sqlite3.connect(get_db_name())
     cursor = conn.cursor()
     
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS pacjenci (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            imie TEXT NOT NULL,
-            nazwisko TEXT NOT NULL,
-            wiek INTEGER,
-            telefon TEXT,
-            email TEXT,
-            cel_terapii TEXT,
-            przeciwwskazania TEXT,
-            data_rejestracji TEXT
-        )
-    """)
-    
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS historia_wizyt (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            pacjent_id INTEGER,
-            data_wizyty TEXT,
-            notatka TEXT,
-            FOREIGN KEY (pacjent_id) REFERENCES pacjenci(id) ON DELETE CASCADE
-        )
-    """)
-    
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS zapisane_plany (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            pacjent_id INTEGER,
-            data_zapisu TEXT,
-            profil_planu TEXT,
-            typ_kliniczny TEXT,
-            plan_json TEXT,
-            FOREIGN KEY (pacjent_id) REFERENCES pacjenci(id) ON DELETE CASCADE
-        )
-    """)
-    
-    try:
-        cursor.execute("ALTER TABLE zapisane_plany ADD COLUMN typ_kliniczny TEXT DEFAULT 'Ogólny'")
-    except sqlite3.OperationalError:
-        pass
+    cursor.execute("""CREATE TABLE IF NOT EXISTS pacjenci (
+        id INTEGER PRIMARY KEY AUTOINCREMENT, imie TEXT NOT NULL, nazwisko TEXT NOT NULL,
+        wiek INTEGER, telefon TEXT, email TEXT, cel_terapii TEXT, przeciwwskazania TEXT, data_rejestracji TEXT)""")
+        
+    cursor.execute("""CREATE TABLE IF NOT EXISTS historia_wizyt (
+        id INTEGER PRIMARY KEY AUTOINCREMENT, pacjent_id INTEGER, data_wizyty TEXT, notatka TEXT,
+        FOREIGN KEY (pacjent_id) REFERENCES pacjenci(id) ON DELETE CASCADE)""")
+        
+    cursor.execute("""CREATE TABLE IF NOT EXISTS zapisane_plany (
+        id INTEGER PRIMARY KEY AUTOINCREMENT, pacjent_id INTEGER, data_zapisu TEXT, profil_planu TEXT,
+        typ_kliniczny TEXT, plan_json TEXT, FOREIGN KEY (pacjent_id) REFERENCES pacjenci(id) ON DELETE CASCADE)""")
+        
+    try: cursor.execute("ALTER TABLE zapisane_plany ADD COLUMN typ_kliniczny TEXT DEFAULT 'Ogólny'")
+    except sqlite3.OperationalError: pass
         
     conn.commit()
     conn.close()
 
+# Uruchamiamy inicjalizację. Ponieważ wyżej jest st.stop(), wywoła się tylko dla zalogowanych!
 inicjalizuj_baze()
 
 def dodaj_pacjenta(imie, nazwisko, wiek, telefon, email, cel, przeciwwskazania):
-    conn = sqlite3.connect(DB_NAME)
+    conn = sqlite3.connect(get_db_name())
     cursor = conn.cursor()
     data_teraz = datetime.now().strftime("%Y-%m-%d %H:%M")
-    cursor.execute("""
-        INSERT INTO pacjenci (imie, nazwisko, wiek, telefon, email, cel_terapii, przeciwwskazania, data_rejestracji)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    """, (imie, nazwisko, wiek, telefon, email, cel, przeciwwskazania, data_teraz))
+    cursor.execute("INSERT INTO pacjenci (imie, nazwisko, wiek, telefon, email, cel_terapii, przeciwwskazania, data_rejestracji) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", 
+                   (imie, nazwisko, wiek, telefon, email, cel, przeciwwskazania, data_teraz))
     conn.commit()
     conn.close()
 
 def pobierz_wszystkich_pacjentow(szukaj_fraza=""):
-    conn = sqlite3.connect(DB_NAME)
+    conn = sqlite3.connect(get_db_name())
     cursor = conn.cursor()
     if szukaj_fraza:
-        cursor.execute("""
-            SELECT id, imie, nazwisko FROM pacjenci 
-            WHERE imie LIKE ? OR nazwisko LIKE ?
-            ORDER BY nazwisko ASC
-        """, (f"%{szukaj_fraza}%", f"%{szukaj_fraza}%"))
+        cursor.execute("SELECT id, imie, nazwisko FROM pacjenci WHERE imie LIKE ? OR nazwisko LIKE ? ORDER BY nazwisko ASC", (f"%{szukaj_fraza}%", f"%{szukaj_fraza}%"))
     else:
         cursor.execute("SELECT id, imie, nazwisko FROM pacjenci ORDER BY nazwisko ASC")
     wyszukani = cursor.fetchall()
@@ -98,22 +79,19 @@ def pobierz_wszystkich_pacjentow(szukaj_fraza=""):
     return wyszukani
 
 def pobierz_szczegoly_pacjenta(pacjent_id):
-    conn = sqlite3.connect(DB_NAME)
+    conn = sqlite3.connect(get_db_name())
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM pacjenci WHERE id = ?", (pacjent_id,))
     pacjent = cursor.fetchone()
-    
     cursor.execute("SELECT data_wizyty, notatka FROM historia_wizyt WHERE pacjent_id = ? ORDER BY id DESC", (pacjent_id,))
     notatki = cursor.fetchall()
-    
     cursor.execute("SELECT id, data_zapisu, profil_planu, typ_kliniczny, plan_json FROM zapisane_plany WHERE pacjent_id = ? ORDER BY id DESC", (pacjent_id,))
     plany = cursor.fetchall()
-    
     conn.close()
     return pacjent, notatki, plany
 
 def dodaj_notatke_wizyty(pacjent_id, notatka):
-    conn = sqlite3.connect(DB_NAME)
+    conn = sqlite3.connect(get_db_name())
     cursor = conn.cursor()
     data_teraz = datetime.now().strftime("%Y-%m-%d %H:%M")
     cursor.execute("INSERT INTO historia_wizyt (pacjent_id, data_wizyty, notatka) VALUES (?, ?, ?)", (pacjent_id, data_teraz, notatka))
@@ -121,31 +99,25 @@ def dodaj_notatke_wizyty(pacjent_id, notatka):
     conn.close()
 
 def zapisz_plan_pacjenta(pacjent_id, profil_planu, typ_kliniczny, lista_plan_cache):
-    conn = sqlite3.connect(DB_NAME)
+    conn = sqlite3.connect(get_db_name())
     cursor = conn.cursor()
     data_teraz = datetime.now().strftime("%Y-%m-%d %H:%M")
     plan_tekst_json = json.dumps(lista_plan_cache, ensure_ascii=False)
-    
-    cursor.execute("""
-        INSERT INTO zapisane_plany (pacjent_id, data_zapisu, profil_planu, typ_kliniczny, plan_json)
-        VALUES (?, ?, ?, ?, ?)
-    """, (pacjent_id, data_teraz, profil_planu, typ_kliniczny, plan_tekst_json))
+    cursor.execute("INSERT INTO zapisane_plany (pacjent_id, data_zapisu, profil_planu, typ_kliniczny, plan_json) VALUES (?, ?, ?, ?, ?)", 
+                   (pacjent_id, data_teraz, profil_planu, typ_kliniczny, plan_tekst_json))
     conn.commit()
     conn.close()
 
 def aktualizuj_pacjenta(pacjent_id, imie, nazwisko, wiek, telefon, email, cel, przeciwwskazania):
-    conn = sqlite3.connect(DB_NAME)
+    conn = sqlite3.connect(get_db_name())
     cursor = conn.cursor()
-    cursor.execute("""
-        UPDATE pacjenci 
-        SET imie = ?, nazwisko = ?, wiek = ?, telefon = ?, email = ?, cel_terapii = ?, przeciwwskazania = ?
-        WHERE id = ?
-    """, (imie, nazwisko, wiek, telefon, email, cel, przeciwwskazania, pacjent_id))
+    cursor.execute("UPDATE pacjenci SET imie = ?, nazwisko = ?, wiek = ?, telefon = ?, email = ?, cel_terapii = ?, przeciwwskazania = ? WHERE id = ?", 
+                   (imie, nazwisko, wiek, telefon, email, cel, przeciwwskazania, pacjent_id))
     conn.commit()
     conn.close()
 
 def usun_pacjenta(pacjent_id):
-    conn = sqlite3.connect(DB_NAME)
+    conn = sqlite3.connect(get_db_name())
     cursor = conn.cursor()
     cursor.execute("DELETE FROM pacjenci WHERE id = ?", (pacjent_id,))
     conn.commit()
@@ -155,6 +127,32 @@ def usun_pacjenta(pacjent_id):
 # KONFIGURACJA STRONY STREAMLIT
 # ==============================================================================
 st.set_page_config(page_title="Fizjo Workout Ultimate", page_icon="💪", layout="centered")
+
+# ==============================================================================
+# SYSTEM LOGOWANIA I IZOLACJI DANYCH
+# ==============================================================================
+if "zalogowany_terapeuta" not in st.session_state:
+    st.session_state.zalogowany_terapeuta = None
+
+# Jeśli nikt nie jest zalogowany, pokazujemy TYLKO ekran logowania i zatrzymujemy kod
+if st.session_state.zalogowany_terapeuta is None:
+    st.title("🔐 Logowanie do gabinetu")
+    st.info("Podaj swój unikalny login, aby uzyskać dostęp do swojej prywatnej bazy pacjentów.")
+    
+    with st.form("formularz_logowania"):
+        nazwa_usera = st.text_input("Twój login (np. imie_nazwisko):")
+        haslo = st.text_input("PIN / Hasło (opcjonalnie):", type="password")
+        
+        if st.form_submit_button("Zaloguj się", type="primary"):
+            if nazwa_usera.strip():
+                # Formatyzujemy login, by mógł być bezpieczną nazwą pliku (małe litery, bez spacji)
+                bezpieczny_login = nazwa_usera.strip().lower().replace(" ", "_")
+                st.session_state.zalogowany_terapeuta = bezpieczny_login
+                st.rerun()
+            else:
+                st.error("Podaj nazwę użytkownika!")
+    
+    st.stop() # <-- TO ZATRZYMUJE APLIKACJĘ! Kod poniżej się nie wykona bez zalogowania.
 
 if 'wylosowany_plan_cache' not in st.session_state:
     st.session_state.wylosowany_plan_cache = []
@@ -1210,7 +1208,13 @@ with st.sidebar:
     if st.button("❌ CZYŚĆ EKRAN (RESET)", use_container_width=True):
         st.session_state.wylosowany_plan_cache = []
         st.rerun()    
-        
+
+    st.success(f"👤 Zalogowano: **{st.session_state.zalogowany_terapeuta}**")
+    if st.button("🚪 Wyloguj się", use_container_width=True):
+        st.session_state.clear() # Czyści całą sesję
+        st.rerun()
+    st.divider()
+    
     st.divider()
     if st.session_state.wylosowany_plan_cache:
         st.success("Plan gotowy!")
@@ -1259,7 +1263,6 @@ tab1, tab_pacjenci, tab2, tab_protokoly, tab3, tab4 = st.tabs([
     "📝 Twój Plan", "👥 Karta Pacjenta", "➕ Kreator", "🏥 Protokoły Kliniczne", "✨ Asystent AI", "⚙️ Baza Ćwiczeń"
 ])
 
-# ZAKŁADKA 1: WYGENEROWANY PLAN
 # ZAKŁADKA 1: WYGENEROWANY PLAN
 with tab1:
     if not st.session_state.wylosowany_plan_cache:
