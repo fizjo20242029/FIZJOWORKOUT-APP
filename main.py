@@ -130,6 +130,19 @@ def usun_pacjenta(pacjent_id):
 st.set_page_config(page_title="Fizjo Workout Ultimate", page_icon="💪", layout="centered")
 
 # ==============================================================================
+# UKRYWANIE DOMYŚLNEGO MENU STREAMLIT (GITHUB, DEPLOY, STOPKA)
+# ==============================================================================
+ukryj_menu_style = """
+    <style>
+    #MainMenu {visibility: hidden;}
+    header {visibility: hidden;}
+    footer {visibility: hidden;}
+    .stAppDeployButton {display:none;}
+    </style>
+"""
+st.markdown(ukryj_menu_style, unsafe_allow_html=True)
+
+# ==============================================================================
 # SYSTEM LOGOWANIA, REJESTRACJI I IZOLACJI DANYCH
 # ==============================================================================
 # ==============================================================================
