@@ -11,6 +11,7 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 import streamlit as st
 from groq import Groq
+import hashlib
 
 # ==============================================================================
 # BAZA DANYCH PACJENTÓW (SQLITE)
@@ -131,28 +132,113 @@ st.set_page_config(page_title="Fizjo Workout Ultimate", page_icon="💪", layout
 # ==============================================================================
 # SYSTEM LOGOWANIA I IZOLACJI DANYCH
 # ==============================================================================
+# ==============================================================================
+# SYSTEM LOGOWANIA, REJESTRACJI I IZOLACJI DANYCH
+# ==============================================================================
+import sqlite3
+import hashlib
+
+# 1. Funkcje obsługi bazy użytkowników (Główna bramka)
+def inicjalizuj_baze_uzytkownikow():
+    conn = sqlite3.connect("system_uzytkownikow.db")
+    cursor = conn.cursor()
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS uzytkownicy (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            login TEXT UNIQUE NOT NULL,
+            haslo_hash TEXT NOT NULL
+        )
+    """)
+    conn.commit()
+    conn.close()
+
+def ma_konto(login):
+    conn = sqlite3.connect("system_uzytkownikow.db")
+    cursor = conn.cursor()
+    cursor.execute("SELECT id FROM uzytkownicy WHERE login = ?", (login,))
+    wynik = cursor.fetchone()
+    conn.close()
+    return wynik is not None
+
+def zarejestruj_uzytkownika(login, haslo):
+    if ma_konto(login):
+        return False # Login już zajęty
+        
+    haslo_hash = hashlib.sha256(haslo.encode('utf-8')).hexdigest()
+    conn = sqlite3.connect("system_uzytkownikow.db")
+    cursor = conn.cursor()
+    cursor.execute("INSERT INTO uzytkownicy (login, haslo_hash) VALUES (?, ?)", (login, haslo_hash))
+    conn.commit()
+    conn.close()
+    return True
+
+def weryfikuj_logowanie(login, haslo):
+    haslo_hash = hashlib.sha256(haslo.encode('utf-8')).hexdigest()
+    conn = sqlite3.connect("system_uzytkownikow.db")
+    cursor = conn.cursor()
+    cursor.execute("SELECT haslo_hash FROM uzytkownicy WHERE login = ?", (login,))
+    wynik = cursor.fetchone()
+    conn.close()
+    
+    if wynik and wynik[0] == haslo_hash:
+        return True
+    return False
+
+# Uruchamiamy tworzenie bazy użytkowników
+inicjalizuj_baze_uzytkownikow()
+
+# 2. Stan sesji
 if "zalogowany_terapeuta" not in st.session_state:
     st.session_state.zalogowany_terapeuta = None
 
-# Jeśli nikt nie jest zalogowany, pokazujemy TYLKO ekran logowania i zatrzymujemy kod
+# 3. Interfejs Logowania i Rejestracji (Blokada dostępu)
 if st.session_state.zalogowany_terapeuta is None:
-    st.title("🔐 Logowanie do gabinetu")
-    st.info("Podaj swój unikalny login, aby uzyskać dostęp do swojej prywatnej bazy pacjentów.")
+    st.title("🛡️ Panel dostępu FIZJO WORKOUT")
     
-    with st.form("formularz_logowania"):
-        nazwa_usera = st.text_input("Twój login (np. imie_nazwisko):")
-        haslo = st.text_input("PIN / Hasło (opcjonalnie):", type="password")
-        
-        if st.form_submit_button("Zaloguj się", type="primary"):
-            if nazwa_usera.strip():
-                # Formatyzujemy login, by mógł być bezpieczną nazwą pliku (małe litery, bez spacji)
-                bezpieczny_login = nazwa_usera.strip().lower().replace(" ", "_")
-                st.session_state.zalogowany_terapeuta = bezpieczny_login
-                st.rerun()
-            else:
-                st.error("Podaj nazwę użytkownika!")
+    tab_logowanie, tab_rejestracja = st.tabs(["🔐 Zaloguj się", "📝 Załóż nowe konto"])
     
-    st.stop() # <-- TO ZATRZYMUJE APLIKACJĘ! Kod poniżej się nie wykona bez zalogowania.
+    # --- LOGOWANIE ---
+    with tab_logowanie:
+        st.markdown("#### Masz już profil?")
+        with st.form("formularz_logowania"):
+            l_login = st.text_input("Twój login:").strip().lower().replace(" ", "_")
+            l_haslo = st.text_input("Hasło:", type="password")
+            
+            if st.form_submit_button("Wejdź do gabinetu", type="primary"):
+                if l_login and l_haslo:
+                    if weryfikuj_logowanie(l_login, l_haslo):
+                        st.session_state.zalogowany_terapeuta = l_login
+                        st.rerun()
+                    else:
+                        st.error("Błędny login lub hasło! Spróbuj ponownie.")
+                else:
+                    st.warning("Uzupełnij wszystkie pola.")
+
+    # --- REJESTRACJA ---
+    with tab_rejestracja:
+        st.markdown("#### Pierwszy raz tutaj?")
+        st.info("Zarejestruj się, aby utworzyć swoją prywatną, szyfrowaną bazę pacjentów.")
+        with st.form("formularz_rejestracji"):
+            r_login = st.text_input("Wybierz unikalny login (np. jankowalski):").strip().lower().replace(" ", "_")
+            r_haslo1 = st.text_input("Utwórz hasło:", type="password")
+            r_haslo2 = st.text_input("Powtórz hasło:", type="password")
+            
+            if st.form_submit_button("Zarejestruj konto", type="secondary"):
+                if r_login and r_haslo1 and r_haslo2:
+                    if r_haslo1 != r_haslo2:
+                        st.error("Hasła nie są identyczne!")
+                    elif len(r_haslo1) < 4:
+                        st.error("Hasło musi mieć minimum 4 znaki.")
+                    else:
+                        sukces = zarejestruj_uzytkownika(r_login, r_haslo1)
+                        if sukces:
+                            st.success(f"Konto '{r_login}' zostało utworzone! Możesz się teraz zalogować w zakładce obok.")
+                        else:
+                            st.error(f"Login '{r_login}' jest już zajęty. Wybierz inny.")
+                else:
+                    st.warning("Uzupełnij wszystkie pola.")
+                    
+    st.stop() # <-- Blokuje wyświetlenie reszty aplikacji bez poprawnego logowania!
 
 if 'wylosowany_plan_cache' not in st.session_state:
     st.session_state.wylosowany_plan_cache = []
