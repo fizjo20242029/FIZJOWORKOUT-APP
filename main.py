@@ -1343,7 +1343,7 @@ else:
         groq_client = Groq(api_key=st.session_state.get('api_key', ''))
         
         # Sprawdzanie również ma 8 spacji
-        if not groq_client:
+            if not groq_client:
             st.error("Błąd klienta") # To ma 12 spacji (jest wewnątrz 'if')
         else:
             # Tutaj idzie główny kod Twojego czatu...
