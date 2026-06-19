@@ -1321,14 +1321,158 @@ with st.sidebar:
     except FileNotFoundError:
         st.error("Nie znaleziono pliku background.jpg")
 
-    st.header("🔑 Dostęp do AI")
-    user_api_key = st.text_input("Twój klucz API Groq:", type="password", help="Pobierz darmowy klucz ze strony console.groq.com")
-    
-    # ... (tutaj leci reszta Twojego kodu w sidebarze, np. st.caption, st.divider itd.) ...
-    st.caption("Nie masz klucza? Pobierz go bezpłatnie ze strony: [console.groq.com](https://console.groq.com/)")
-    groq_client = Groq(api_key=user_api_key) if user_api_key else None
+    # ==============================================================================
+# ZAKŁADKA AI - AUDYT I PORÓWNANIE PRZYPADKÓW
+# ==============================================================================
+st.header("✨ Asystent AI - Wsparcie Decyzji Klinicznych")
 
-    st.divider()
+if 'api_key' not in st.session_state or not st.session_state['api_key']:
+    st.warning("⚠️ Aby korzystać z asystenta, autoryzuj swój klucz Groq API (wklej klucz w panelu u góry).")
+else:
+    # Dodaliśmy TRZECIĄ zakładkę!
+    sub_ai_czat, sub_ai_audyt, sub_ai_porownanie = st.tabs(["💬 Ogólny Czat", "🩺 Audyt Planu", "⚖️ Porównanie Przypadków"])
+    
+    # ---------------------------------------------------------
+    # 1. Zwykły czat
+    with sub_ai_czat:
+        st.info("Tutaj możesz zadać dowolne pytanie z zakresu fizjoterapii lub anatomii.")
+        # Miejsce na Twój standardowy czat z AI
+        
+    # ---------------------------------------------------------
+    # 2. Inteligentny Audyt (pojedynczy plan)
+    with sub_ai_audyt:
+        st.markdown("### Weryfikacja bezpieczeństwa i biomechaniki")
+        lista_pacjentow = pobierz_wszystkich_pacjentow()
+        opcje_pacjentow = {f"{p[2]} {p[1]} (ID: {p[0]})": p[0] for p in lista_pacjentow}
+        
+        if not opcje_pacjentow:
+            st.info("Brak pacjentów w bazie.")
+        else:
+            wybrany_p_etykieta = st.selectbox("Wybierz pacjenta do analizy:", list(opcje_pacjentow.keys()), key="audyt_pacjent")
+            wybrany_p_id = opcje_pacjentow[wybrany_p_etykieta]
+            pacjent_dane, _, plany_dane = pobierz_szczegoly_pacjenta(wybrany_p_id)
+            
+            st.success(f"**Kontekst:** Wiek: {pacjent_dane[3]} | Cel: {pacjent_dane[6]} | ⚠️ Przeciwwskazania: {pacjent_dane[7] or 'Brak'}")
+            
+            if not plany_dane:
+                st.warning("Ten pacjent nie ma planów.")
+            else:
+                opcje_planow = {f"[{p[3] or 'Ogólny'}] Data: {p[1]}": p for p in plany_dane}
+                wybrany_plan_etykieta = st.selectbox("Wybierz zapisany program:", list(opcje_planow.keys()), key="audyt_plan")
+                wybrany_plan_rekord = opcje_planow[wybrany_plan_etykieta]
+                
+                if st.button("🤖 Rozpocznij Audyt Planu", type="primary", use_container_width=True, key="btn_audyt"):
+                    with st.spinner("Analizuję biomechanikę..."):
+                        try:
+                            klient_ai = Groq(api_key=st.session_state['api_key'])
+                            odkodowany_plan = json.loads(wybrany_plan_rekord[4])
+                            plan_tekst = "\n".join([f"- {cw['nazwa']} ({cw.get('parametry', '')})" for kat, cw in odkodowany_plan if kat != "NAGŁÓWEK DNIA"])
+                            
+                            system_prompt = "Jesteś ekspertem biomechaniki klinicznej. Wykonaj krótki, analityczny audyt bezpieczeństwa podanego planu."
+                            user_prompt = f"Pacjent: {pacjent_dane[3]} lat, cel: {pacjent_dane[6]}, przeciwwskazania: {pacjent_dane[7]}.\nPlan:\n{plan_tekst}"
+                            
+                            odpowiedz = klient_ai.chat.completions.create(
+                                messages=[{"role": "system", "content": system_prompt}, {"role": "user", "content": user_prompt}],
+                                model="llama3-8b-8192", temperature=0.3
+                            )
+                            st.divider()
+                            st.write(odpowiedz.choices[0].message.content)
+                        except Exception as e:
+                            st.error(f"Błąd: {e}")
+
+    # ---------------------------------------------------------
+    # 3. NOWOŚĆ: Porównanie Przypadków (Case Study)
+    with sub_ai_porownanie:
+        st.markdown("### ⚖️ Kliniczne Studium Porównawcze")
+        st.caption("Zestaw ze sobą dwóch pacjentów. AI przeanalizuje różnice w parametrach i wskaże punkty wspólne w terapii.")
+        
+        lista_pacjentow = pobierz_wszystkich_pacjentow()
+        opcje_pacjentow = {f"{p[2]} {p[1]} (ID: {p[0]})": p[0] for p in lista_pacjentow}
+        
+        if len(opcje_pacjentow) < 2:
+            st.info("Musisz mieć w bazie co najmniej dwóch pacjentów, aby dokonać porównania.")
+        else:
+            # Używamy kolumn dla przejrzystości interfejsu!
+            col_a, col_b = st.columns(2)
+            
+            dane_do_porownania = {}
+            
+            # --- KOLUMNA LEWA (PRZYPADEK A) ---
+            with col_a:
+                st.markdown("#### 👤 Przypadek A")
+                etykieta_a = st.selectbox("Wybierz 1. pacjenta:", list(opcje_pacjentow.keys()), key="por_pacjent_a")
+                id_a = opcje_pacjentow[etykieta_a]
+                pacjent_a, _, plany_a = pobierz_szczegoly_pacjenta(id_a)
+                
+                st.info(f"**Wiek:** {pacjent_a[3]} | **Cel:** {pacjent_a[6]}")
+                
+                if plany_a:
+                    opcje_pl_a = {f"Data: {p[1]}": p for p in plany_a}
+                    plan_a_etyk = st.selectbox("Plan pacjenta A:", list(opcje_pl_a.keys()), key="por_plan_a")
+                    dane_do_porownania['A'] = (pacjent_a, opcje_pl_a[plan_a_etyk])
+                else:
+                    st.warning("Brak przypisanych planów.")
+
+            # --- KOLUMNA PRAWA (PRZYPADEK B) ---
+            with col_b:
+                st.markdown("#### 👤 Przypadek B")
+                etykieta_b = st.selectbox("Wybierz 2. pacjenta:", list(opcje_pacjentow.keys()), key="por_pacjent_b", index=1)
+                id_b = opcje_pacjentow[etykieta_b]
+                pacjent_b, _, plany_b = pobierz_szczegoly_pacjenta(id_b)
+                
+                st.info(f"**Wiek:** {pacjent_b[3]} | **Cel:** {pacjent_b[6]}")
+                
+                if plany_b:
+                    opcje_pl_b = {f"Data: {p[1]}": p for p in plany_b}
+                    plan_b_etyk = st.selectbox("Plan pacjenta B:", list(opcje_pl_b.keys()), key="por_plan_b")
+                    dane_do_porownania['B'] = (pacjent_b, opcje_pl_b[plan_b_etyk])
+                else:
+                    st.warning("Brak przypisanych planów.")
+            
+            st.divider()
+            
+            # --- SILNIK ANALITYCZNY ---
+            if len(dane_do_porownania) == 2:
+                if st.button("🧠 Przeprowadź Analizę Porównawczą", type="primary", use_container_width=True):
+                    with st.spinner("Szukam wzorców klinicznych i różnic..."):
+                        try:
+                            klient_ai = Groq(api_key=st.session_state['api_key'])
+                            
+                            # Dekodowanie planu A
+                            odk_plan_a = json.loads(dane_do_porownania['A'][1][4])
+                            tekst_plan_a = "\n".join([f"- {cw['nazwa']} ({cw.get('parametry', '')})" for kat, cw in odk_plan_a if kat != "NAGŁÓWEK DNIA"])
+                            
+                            # Dekodowanie planu B
+                            odk_plan_b = json.loads(dane_do_porownania['B'][1][4])
+                            tekst_plan_b = "\n".join([f"- {cw['nazwa']} ({cw.get('parametry', '')})" for kat, cw in odk_plan_b if kat != "NAGŁÓWEK DNIA"])
+                            
+                            system_prompt = "Jesteś mentorem fizjoterapii. Porównaj dwa przypadki kliniczne i ich programy terapeutyczne. Wskaż podobieństwa, różnice w doborze ćwiczeń oraz wyciągnij wnioski, dlaczego plany się od siebie różnią."
+                            
+                            user_prompt = f"""
+                            PRZYPADEK A (Wiek {dane_do_porownania['A'][0][3]}):
+                            Cel: {dane_do_porownania['A'][0][6]}
+                            Przeciwwskazania: {dane_do_porownania['A'][0][7]}
+                            Plan A:
+                            {tekst_plan_a}
+                            
+                            PRZYPADEK B (Wiek {dane_do_porownania['B'][0][3]}):
+                            Cel: {dane_do_porownania['B'][0][6]}
+                            Przeciwwskazania: {dane_do_porownania['B'][0][7]}
+                            Plan B:
+                            {tekst_plan_b}
+                            
+                            Przeanalizuj te dwa przypadki. Podziel odpowiedź na: 1) Podobieństwa patologii/celu, 2) Różnice w architekturze planów (dobór ćwiczeń, parametry), 3) Wnioski końcowe i sugestie.
+                            """
+                            
+                            odpowiedz = klient_ai.chat.completions.create(
+                                messages=[{"role": "system", "content": system_prompt}, {"role": "user", "content": user_prompt}],
+                                model="llama3-8b-8192", temperature=0.4
+                            )
+                            
+                            st.markdown("### 📊 Raport Porównawczy")
+                            st.write(odpowiedz.choices[0].message.content)
+                        except Exception as e:
+                            st.error(f"Błąd silnika AI: {e}")
     st.header("⚙️ Konfiguracja")
     
     st.markdown("""
