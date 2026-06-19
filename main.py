@@ -268,16 +268,13 @@ if st.session_state.zalogowany_terapeuta is None:
         with st.form("form_rej"):
             r_login = st.text_input("Wybierz unikalny login:").strip().lower().replace(" ", "_")
             r_haslo = st.text_input("Utwórz hasło:", type="password")
-            r_pytanie = st.selectbox("Wybierz pytanie pomocnicze (do odzyskania hasła):", [
-                "Jakie jest nazwisko panieńskie Twojej matki?",
-                "Jak wabił się Twój pierwszy zwierzak?",
-                "W jakim mieście się urodziłeś/aś?",
-                "Jaka była marka Twojego pierwszego samochodu?"
-            ])
-            r_odp = st.text_input("Odpowiedź na pytanie (zapamiętaj ją!):")
+            
+            # ZMIANA: Zamiast listy (selectbox), dajemy pole tekstowe (text_input)
+            r_pytanie = st.text_input("Wpisz własne pytanie pomocnicze (np. Ulubione danie z dzieciństwa?):")
+            r_odp = st.text_input("Odpowiedź na Twoje pytanie (zapamiętaj ją!):")
             
             if st.form_submit_button("Zarejestruj konto", type="secondary"):
-                if r_login and r_haslo and r_odp:
+                if r_login and r_haslo and r_pytanie and r_odp:
                     if len(r_haslo) >= 4:
                         if zarejestruj_uzytkownika(r_login, r_haslo, r_pytanie, r_odp):
                             st.success(f"Konto '{r_login}' gotowe! Możesz się zalogować.")
@@ -286,7 +283,7 @@ if st.session_state.zalogowany_terapeuta is None:
                     else:
                         st.error("Hasło musi mieć min. 4 znaki.")
                 else:
-                    st.warning("Uzupełnij wszystkie pola, w tym odpowiedź zabezpieczającą!")
+                    st.warning("Uzupełnij wszystkie pola, wymyśl pytanie i podaj odpowiedź zabezpieczającą!")
 
     with tab_odzysk:
         st.markdown("#### Zresetuj zapomniane hasło")
