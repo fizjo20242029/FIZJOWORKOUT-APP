@@ -1329,7 +1329,9 @@ st.header("✨ Asystent AI - Wsparcie Decyzji Klinicznych")
 if 'api_key' not in st.session_state or not st.session_state['api_key']:
     st.warning("⚠️ Aby korzystać z asystenta, autoryzuj swój klucz Groq API (wklej klucz w panelu u góry).")
 else:
-    # Dodaliśmy TRZECIĄ zakładkę!
+    # --- TA LINIJKA NAPRAWIA BŁĄD ---
+    groq_client = Groq(api_key=st.session_state['api_key']) 
+    
     sub_ai_czat, sub_ai_audyt, sub_ai_porownanie = st.tabs(["💬 Ogólny Czat", "🩺 Audyt Planu", "⚖️ Porównanie Przypadków"])
     
     # ---------------------------------------------------------
