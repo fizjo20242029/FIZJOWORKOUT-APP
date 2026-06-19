@@ -1972,6 +1972,11 @@ with tab_protokoly:
 # ZAKŁADKA 3: CZAT AI GROQ
 with tab3:
     st.subheader("Wirtualny Konsultant Treningowy")
+
+    # Wymuszamy stworzenie klienta tuż przed jego użyciem
+    groq_client = Groq(api_key=st.session_state.get('api_key', ''))
+
+    if not groq_client:
     if not groq_client:
         st.info("👈 Wklej klucz w panelu bocznym.")
     else:
