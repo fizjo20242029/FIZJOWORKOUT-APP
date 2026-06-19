@@ -134,10 +134,14 @@ st.set_page_config(page_title="Fizjo Workout Ultimate", page_icon="💪", layout
 # ==============================================================================
 ukryj_menu_style = """
     <style>
+    /* Ukrywa menu z prawej strony (trzy kropki/kreski) */
     #MainMenu {visibility: hidden;}
-    header {visibility: hidden;}
-    footer {visibility: hidden;}
+    
+    /* Ukrywa przycisk "Deploy" */
     .stAppDeployButton {display:none;}
+    
+    /* Ukrywa napis "Made with Streamlit" na dole */
+    footer {visibility: hidden;}
     </style>
 """
 st.markdown(ukryj_menu_style, unsafe_allow_html=True)
