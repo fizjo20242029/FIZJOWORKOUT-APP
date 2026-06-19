@@ -38,7 +38,7 @@ def inicjalizuj_baze():
         )
     """)
     
-    # 2. Tabela historii wizyt / notatek
+    # 2. Tabela historii wizyt
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS historia_wizyt (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -49,66 +49,56 @@ def inicjalizuj_baze():
         )
     """)
     
-    # 3. Tabela zapisanych planów treningowych
+    # 3. Zaktualizowana Tabela zapisanych planów (z kolumną typ_kliniczny)
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS zapisane_plany (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             pacjent_id INTEGER,
             data_zapisu TEXT,
             profil_planu TEXT,
+            typ_kliniczny TEXT,  -- NOWOŚĆ: Przechowuje informację o specjalizacji planu
             plan_json TEXT,
             FOREIGN KEY (pacjent_id) REFERENCES pacjenci(id) ON DELETE CASCADE
         )
     """)
     
+    # --- AUTOMATYCZNA MIGRACJA ---
+    # Jeśli baza już istniała, dodajemy kolumnę dynamicznie, aby nie zepsuć starych danych
+    try:
+        cursor.execute("ALTER TABLE zapisane_plany ADD COLUMN typ_kliniczny TEXT DEFAULT 'Ogólny'")
+    except sqlite3.OperationalError:
+        # Kolumna już istnieje, ignorujemy błąd
+        pass
+        
     conn.commit()
     conn.close()
 
-# Wywołujemy funkcję inicjalizacji przy starcie aplikacji
-inicjalizuj_baze()
-
-# ==============================================================================
-# FUNKCJE OPERACJI NA BAZIE (CRUD)
-# ==============================================================================
-
-def dodaj_pacjenta(imie, nazwisko, wiek, telefon, email, cel, przeciwwskazania):
+def zapisz_plan_pacjenta(pacjent_id, profil_planu, typ_kliniczny, lista_plan_cache):
+    """Zapisuje wygenerowany plan wraz z przypisaną specjalizacją kliniczną."""
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
     data_teraz = datetime.now().strftime("%Y-%m-%d %H:%M")
+    plan_tekst_json = json.dumps(lista_plan_cache, ensure_ascii=False)
+    
     cursor.execute("""
-        INSERT INTO pacjenci (imie, nazwisko, wiek, telefon, email, cel_terapii, przeciwwskazania, data_rejestracji)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    """, (imie, nazwisko, wiek, telefon, email, cel, przeciwwskazania, data_teraz))
+        INSERT INTO zapisane_plany (pacjent_id, data_zapisu, profil_planu, typ_kliniczny, plan_json)
+        VALUES (?, ?, ?, ?, ?)
+    """, (pacjent_id, data_teraz, profil_planu, typ_kliniczny, plan_tekst_json))
     conn.commit()
     conn.close()
 
-def pobierz_wszystkich_pacjentów(szukaj_fraza=""):
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
-    if szukaj_fraza:
-        cursor.execute("""
-            SELECT id, imie, nazwisko FROM pacjenci 
-            WHERE imie LIKE ? OR nazwisko LIKE ?
-            ORDER BY nazwisko ASC
-        """, (f"%{szukaj_fraza}%", f"%{szukaj_fraza}%"))
-    else:
-        cursor.execute("SELECT id, imie, nazwisko FROM pacjenci ORDER BY nazwisko ASC")
-    wyszukani = cursor.fetchall()
-    conn.close()
-    return wyszukani
-
 def pobierz_szczegoly_pacjenta(pacjent_id):
+    """Pobiera dane pacjenta, jego notatki oraz plany treningowe."""
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM pacjenci WHERE id = ?", (pacjent_id,))
     pacjent = cursor.fetchone()
     
-    # Pobierz historię notatek
     cursor.execute("SELECT data_wizyty, notatka FROM historia_wizyt WHERE pacjent_id = ? ORDER BY id DESC", (pacjent_id,))
     notatki = cursor.fetchall()
     
-    # Pobierz historię planów
-    cursor.execute("SELECT id, data_zapisu, profil_planu, plan_json FROM zapisane_plany WHERE pacjent_id = ? ORDER BY id DESC", (pacjent_id,))
+    # Pobieramy również typ_kliniczny (indeks 4 w zapytaniu poniżej)
+    cursor.execute("SELECT id, data_zapisu, profil_planu, typ_kliniczny, plan_json FROM zapisane_plany WHERE pacjent_id = ? ORDER BY id DESC", (pacjent_id,))
     plany = cursor.fetchall()
     
     conn.close()
@@ -1448,14 +1438,44 @@ with tab_pacjenci:
             st.divider()
             
             # AKCJA: Przypisywanie wygenerowanego właśnie planu
-            st.markdown("#### 🛠️ Akcje na koncie")
+            # --- ZMODYFIKOWANA SEKCJA PRZYPISYWANIA PLANU W KARCIE PACJENTA ---
+            st.markdown("#### 🛠️ Przypisywanie i Klasyfikacja Planu")
             if st.session_state.wylosowany_plan_cache:
-                if st.button("💾 Przypisz aktualnie wygenerowany plan do tej karty", use_container_width=True, type="primary"):
-                    zapisz_plan_pacjenta(wybrany_pacjent_id, profil, st.session_state.wylosowany_plan_cache)
-                    st.success("Plan został trwale zapisany w historii pacjenta!")
+                st.info("💡 W pamięci podręcznej znajduje się aktywny program przygotowany w generatorze.")
+                
+                # Wybór specjalizacji klinicznej przed zapisem
+                wybrany_profil_kliniczny = st.selectbox(
+                   # Wybór specjalizacji klinicznej przed zapisem
+                wybrany_profil_kliniczny = st.selectbox(
+                    "Wybierz profil kliniczny / specjalizację planu:",
+                    [
+                        "🦴 Ortopedyczny (Układ ruchu / Posturotechnika)",
+                        "🫀 Kardiologiczny (Kardiorehabilitacja / Trening wydolnościowy)",
+                        "🫁 Pulmonologiczny (Trening oddechowy / Drenaż)",
+                        "🎗️ Onkologiczny (Rehabilitacja w chorobach nowotworowych)",
+                        "🧠 Neurologiczny (Neuromobilizacje / PNF / Koordynacja)",
+                        "🔥 Reumatologiczny (Stany zapalne / Przewlekłe)",
+                        "⚽ Sportowy (Przygotowanie motoryczne / Powrót do gry)",
+                        "👶 Pediatryczny (Wady postawy / Rozwój psychoruchowy)",
+                        "👵 Geriatryczny (Aktywizacja seniorów / Profilaktyka upadków)",
+                        "🌸 Uroginekologiczny (Mięśnie dna miednicy / Rozejście kresy)"
+                    ]
+                )
+                
+                if st.button("💾 Zapisz i przypisz program do karty", use_container_width=True, type="primary"):
+                    # Wyciągamy sam tekst bez ikonki dla czystości bazy danych
+                    czysta_nazwa_profilu = wybrany_profil_kliniczny.split(" (")[0][2:] 
+                    
+                    zapisz_plan_pacjenta(
+                        pacjent_id=wybrany_pacjent_id, 
+                        profil_planu=profil, 
+                        typ_kliniczny=czysta_nazwa_profilu, 
+                        lista_plan_cache=st.session_state.wylosowany_plan_cache
+                    )
+                    st.success(f"Program [{czysta_nazwa_profilu}] został trwale dopisany do historii pacjenta!")
                     st.rerun()
             else:
-                st.caption("💡 Wygeneruj najpierw program w generatorze (panel boczny), aby móc go przypisać do tego pacjenta.")
+                st.caption("💡 Wygeneruj najpierw program w panelu bocznym (fizjo lub gym), aby móc go przypisać do tego pacjenta.")
                 
             # Nowa notatka z wizyty
             with st.popover("📝 Dodaj nową notatkę z dzisiejszej wizyty", use_container_width=True):
@@ -1479,26 +1499,39 @@ with tab_pacjenci:
             with sub_tab_plany:
                 if not plany:
                     st.info("Ten pacjent nie ma jeszcze zapisanych planów.")
-                for p_id, data_z, prof, p_json in plany:
-                    with st.expander(f"📦 Plan z dnia {data_z} ({prof.split(': ')[1] if ':' in prof else prof})"):
+                else:
+                    # Opcjonalne filtrowanie historii planów po specjalizacji dla wygody
+                    dostepne_filtry = ["Wszystkie"] + list(set([p[3] for p in plany if p[3]]))
+                    filtr_kliniczny = st.segmented_control("Filtruj historię według profili:", dostepne_filtry, default="Wszystkie")
+
+                    for p_id, data_z, prof, typ_kliniczny_baza, p_json in plany:
+                        # Filtrowanie rekordów
+                        if filtr_kliniczny != "Wszystkie" and typ_kliniczny_baza != filtr_kliniczny:
+                            continue
+                            
+                        # Ładne formatowanie etykiety zwijaka
+                        etykieta_naglowka = f"📋 [{typ_kliniczny_baza or 'Ogólny'}] | Z dnia {data_z}"
                         
-                        # Przycisk do wczytania starego planu z powrotem na ekran główny aplikacji!
-                        if st.button("🔄 Wczytaj ten plan na ekran główny jako aktywny", key=f"load_p_{p_id}"):
-                            st.session_state.wylosowany_plan_cache = json.loads(p_json)
-                            st.toast("Wczytano plan! Przejdź do zakładki 'Twój Plan'.")
-                            st.rerun()
-                        
-                        # Szybki podgląd listy ćwiczeń
-                        odkodowany_plan = json.loads(p_json)
-                        counter = 1
-                        for kat, cw in odkodowany_plan:
-                            if kat != "NAGŁÓWEK DNIA":
-                                st.text(f"{counter}. [{kat}] {cw['nazwa']} -> {cw['parametry']}")
-                                counter += 1
-                            else:
-                                st.markdown(f"**{cw['nazwa']}**")
-        else:
-            st.info("👈 Wybierz pacjenta z listy po lewej stronie lub załóż nową kartę, aby wyświetlić pełną dokumentację medyczną.")
+                        with st.expander(etykieta_naglowka):
+                            st.caption(f"**Profil silnika generującego:** {prof}")
+                            
+                            c_load, c_del = st.columns([3, 1])
+                            with c_load:
+                                if st.button("🔄 Wczytaj jako aktywny", key=f"load_p_{p_id}", use_container_width=True):
+                                    st.session_state.wylosowany_plan_cache = json.loads(p_json)
+                                    st.toast("Wczytano plan! Przejdź do zakładki 'Twój Plan'.")
+                                    st.rerun()
+                            
+                            st.divider()
+                            # Szybki podgląd struktury ćwiczeń
+                            odkodowany_plan = json.loads(p_json)
+                            counter = 1
+                            for kat, cw in odkodowany_plan:
+                                if kat != "NAGŁÓWEK DNIA":
+                                    st.text(f"  {counter}. [{kat}] {cw['nazwa']} -> {cw['parametry']}")
+                                    counter += 1
+                                else:
+                                    st.markdown(f"**{cw['nazwa']}**")
 
 # ZAKŁADKA 2: KREATOR MANUALNY
 with tab2:
