@@ -12,6 +12,9 @@ from openpyxl.utils import get_column_letter
 import streamlit as st
 from groq import Groq
 
+# ==============================================================================
+# BAZA DANYCH PACJENTÓW (SQLITE)
+# ==============================================================================
 import sqlite3
 import json
 from datetime import datetime
@@ -19,11 +22,9 @@ from datetime import datetime
 DB_NAME = "fizjo_workout.db"
 
 def inicjalizuj_baze():
-    """Tworzy strukturę tabel w bazie danych, jeśli jeszcze nie istnieją."""
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
     
-    # 1. Tabela pacjentów
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS pacjenci (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -38,7 +39,6 @@ def inicjalizuj_baze():
         )
     """)
     
-    # 2. Tabela historii wizyt
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS historia_wizyt (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -49,46 +49,55 @@ def inicjalizuj_baze():
         )
     """)
     
-    # 3. Zaktualizowana Tabela zapisanych planów (z kolumną typ_kliniczny)
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS zapisane_plany (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             pacjent_id INTEGER,
             data_zapisu TEXT,
             profil_planu TEXT,
-            typ_kliniczny TEXT,  -- NOWOŚĆ: Przechowuje informację o specjalizacji planu
+            typ_kliniczny TEXT,
             plan_json TEXT,
             FOREIGN KEY (pacjent_id) REFERENCES pacjenci(id) ON DELETE CASCADE
         )
     """)
     
-    # --- AUTOMATYCZNA MIGRACJA ---
-    # Jeśli baza już istniała, dodajemy kolumnę dynamicznie, aby nie zepsuć starych danych
     try:
         cursor.execute("ALTER TABLE zapisane_plany ADD COLUMN typ_kliniczny TEXT DEFAULT 'Ogólny'")
     except sqlite3.OperationalError:
-        # Kolumna już istnieje, ignorujemy błąd
         pass
         
     conn.commit()
     conn.close()
 
-def zapisz_plan_pacjenta(pacjent_id, profil_planu, typ_kliniczny, lista_plan_cache):
-    """Zapisuje wygenerowany plan wraz z przypisaną specjalizacją kliniczną."""
+inicjalizuj_baze()
+
+def dodaj_pacjenta(imie, nazwisko, wiek, telefon, email, cel, przeciwwskazania):
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
     data_teraz = datetime.now().strftime("%Y-%m-%d %H:%M")
-    plan_tekst_json = json.dumps(lista_plan_cache, ensure_ascii=False)
-    
     cursor.execute("""
-        INSERT INTO zapisane_plany (pacjent_id, data_zapisu, profil_planu, typ_kliniczny, plan_json)
-        VALUES (?, ?, ?, ?, ?)
-    """, (pacjent_id, data_teraz, profil_planu, typ_kliniczny, plan_tekst_json))
+        INSERT INTO pacjenci (imie, nazwisko, wiek, telefon, email, cel_terapii, przeciwwskazania, data_rejestracji)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    """, (imie, nazwisko, wiek, telefon, email, cel, przeciwwskazania, data_teraz))
     conn.commit()
     conn.close()
 
+def pobierz_wszystkich_pacjentow(szukaj_fraza=""):
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    if szukaj_fraza:
+        cursor.execute("""
+            SELECT id, imie, nazwisko FROM pacjenci 
+            WHERE imie LIKE ? OR nazwisko LIKE ?
+            ORDER BY nazwisko ASC
+        """, (f"%{szukaj_fraza}%", f"%{szukaj_fraza}%"))
+    else:
+        cursor.execute("SELECT id, imie, nazwisko FROM pacjenci ORDER BY nazwisko ASC")
+    wyszukani = cursor.fetchall()
+    conn.close()
+    return wyszukani
+
 def pobierz_szczegoly_pacjenta(pacjent_id):
-    """Pobiera dane pacjenta, jego notatki oraz plany treningowe."""
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM pacjenci WHERE id = ?", (pacjent_id,))
@@ -97,7 +106,6 @@ def pobierz_szczegoly_pacjenta(pacjent_id):
     cursor.execute("SELECT data_wizyty, notatka FROM historia_wizyt WHERE pacjent_id = ? ORDER BY id DESC", (pacjent_id,))
     notatki = cursor.fetchall()
     
-    # Pobieramy również typ_kliniczny (indeks 4 w zapytaniu poniżej)
     cursor.execute("SELECT id, data_zapisu, profil_planu, typ_kliniczny, plan_json FROM zapisane_plany WHERE pacjent_id = ? ORDER BY id DESC", (pacjent_id,))
     plany = cursor.fetchall()
     
@@ -112,18 +120,16 @@ def dodaj_notatke_wizyty(pacjent_id, notatka):
     conn.commit()
     conn.close()
 
-def zapisz_plan_pacjenta(pacjent_id, profil_planu, lista_plan_cache):
-    """Konwertuje listę ćwiczeń (cache) na format JSON i zapisuje w bazie."""
+def zapisz_plan_pacjenta(pacjent_id, profil_planu, typ_kliniczny, lista_plan_cache):
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
     data_teraz = datetime.now().strftime("%Y-%m-%d %H:%M")
-    # Zamiana struktury Pythona na tekst tekstowy JSON
     plan_tekst_json = json.dumps(lista_plan_cache, ensure_ascii=False)
     
     cursor.execute("""
-        INSERT INTO zapisane_plany (pacjent_id, data_zapisu, profil_planu, plan_json)
-        VALUES (?, ?, ?, ?)
-    """, (pacjent_id, data_teraz, profil_planu, plan_tekst_json))
+        INSERT INTO zapisane_plany (pacjent_id, data_zapisu, profil_planu, typ_kliniczny, plan_json)
+        VALUES (?, ?, ?, ?, ?)
+    """, (pacjent_id, data_teraz, profil_planu, typ_kliniczny, plan_tekst_json))
     conn.commit()
     conn.close()
 
@@ -141,8 +147,6 @@ def aktualizuj_pacjenta(pacjent_id, imie, nazwisko, wiek, telefon, email, cel, p
 def usun_pacjenta(pacjent_id):
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
-    # Dzięki 'ON DELETE CASCADE' w definicji tabeli, baza automatycznie
-    # usunie też wszystkie przypisane do niego notatki i plany!
     cursor.execute("DELETE FROM pacjenci WHERE id = ?", (pacjent_id,))
     conn.commit()
     conn.close()
