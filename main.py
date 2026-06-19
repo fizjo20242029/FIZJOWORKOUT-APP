@@ -1338,7 +1338,15 @@ else:
     # 1. Zwykły czat
     with sub_ai_czat:
         st.info("Tutaj możesz zadać dowolne pytanie z zakresu fizjoterapii lub anatomii.")
-        # Miejsce na Twój standardowy czat z AI
+        
+        # Inicjalizacja klienta ma 8 spacji od lewej krawędzi (jest wewnątrz 'with')
+        groq_client = Groq(api_key=st.session_state.get('api_key', ''))
+        
+        # Sprawdzanie również ma 8 spacji
+        if not groq_client:
+            st.error("Błąd klienta") # To ma 12 spacji (jest wewnątrz 'if')
+        else:
+            # Tutaj idzie główny kod Twojego czatu...
         
     # ---------------------------------------------------------
     # 2. Inteligentny Audyt (pojedynczy plan)
