@@ -1443,8 +1443,6 @@ with tab_pacjenci:
             if st.session_state.wylosowany_plan_cache:
                 st.info("💡 W pamięci podręcznej znajduje się aktywny program przygotowany w generatorze.")
                 
-                # Wybór specjalizacji klinicznej przed zapisem
-                wybrany_profil_kliniczny = st.selectbox(
                    # Wybór specjalizacji klinicznej przed zapisem
                 wybrany_profil_kliniczny = st.selectbox(
                     "Wybierz profil kliniczny / specjalizację planu:",
