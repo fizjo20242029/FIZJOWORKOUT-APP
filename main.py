@@ -130,15 +130,15 @@ def usun_pacjenta(pacjent_id):
 st.set_page_config(page_title="Fizjo Workout Ultimate", page_icon="💪", layout="centered")
 
 # ==============================================================================
-# SYSTEM LOGOWANIA I IZOLACJI DANYCH
-# ==============================================================================
-# ==============================================================================
 # SYSTEM LOGOWANIA, REJESTRACJI I IZOLACJI DANYCH
+# ==============================================================================
+# ==============================================================================
+# SYSTEM LOGOWANIA, REJESTRACJI, ODZYSKIWANIA I IZOLACJI DANYCH
 # ==============================================================================
 import sqlite3
 import hashlib
+import os
 
-# 1. Funkcje obsługi bazy użytkowników (Główna bramka)
 def inicjalizuj_baze_uzytkownikow():
     conn = sqlite3.connect("system_uzytkownikow.db")
     cursor = conn.cursor()
@@ -146,9 +146,17 @@ def inicjalizuj_baze_uzytkownikow():
         CREATE TABLE IF NOT EXISTS uzytkownicy (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             login TEXT UNIQUE NOT NULL,
-            haslo_hash TEXT NOT NULL
+            haslo_hash TEXT NOT NULL,
+            pytanie TEXT,
+            odpowiedz_hash TEXT
         )
     """)
+    # Automatyczna migracja - dodanie kolumn, jeśli baza została już wcześniej utworzona
+    try:
+        cursor.execute("ALTER TABLE uzytkownicy ADD COLUMN pytanie TEXT DEFAULT 'Brak'")
+        cursor.execute("ALTER TABLE uzytkownicy ADD COLUMN odpowiedz_hash TEXT DEFAULT 'Brak'")
+    except sqlite3.OperationalError:
+        pass
     conn.commit()
     conn.close()
 
@@ -160,14 +168,17 @@ def ma_konto(login):
     conn.close()
     return wynik is not None
 
-def zarejestruj_uzytkownika(login, haslo):
-    if ma_konto(login):
-        return False # Login już zajęty
-        
+def zarejestruj_uzytkownika(login, haslo, pytanie, odpowiedz):
+    if ma_konto(login): return False
+    
     haslo_hash = hashlib.sha256(haslo.encode('utf-8')).hexdigest()
+    # Zabezpieczamy też odpowiedź, by nikt z pliku nie odczytał np. imienia matki
+    odp_hash = hashlib.sha256(odpowiedz.strip().lower().encode('utf-8')).hexdigest()
+    
     conn = sqlite3.connect("system_uzytkownikow.db")
     cursor = conn.cursor()
-    cursor.execute("INSERT INTO uzytkownicy (login, haslo_hash) VALUES (?, ?)", (login, haslo_hash))
+    cursor.execute("INSERT INTO uzytkownicy (login, haslo_hash, pytanie, odpowiedz_hash) VALUES (?, ?, ?, ?)", 
+                   (login, haslo_hash, pytanie, odp_hash))
     conn.commit()
     conn.close()
     return True
@@ -179,12 +190,51 @@ def weryfikuj_logowanie(login, haslo):
     cursor.execute("SELECT haslo_hash FROM uzytkownicy WHERE login = ?", (login,))
     wynik = cursor.fetchone()
     conn.close()
+    return wynik and wynik[0] == haslo_hash
+
+def zmien_haslo(login, nowe_haslo):
+    haslo_hash = hashlib.sha256(nowe_haslo.encode('utf-8')).hexdigest()
+    conn = sqlite3.connect("system_uzytkownikow.db")
+    cursor = conn.cursor()
+    cursor.execute("UPDATE uzytkownicy SET haslo_hash = ? WHERE login = ?", (haslo_hash, login))
+    conn.commit()
+    conn.close()
+
+def usun_konto(login):
+    conn = sqlite3.connect("system_uzytkownikow.db")
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM uzytkownicy WHERE login = ?", (login,))
+    conn.commit()
+    conn.close()
+    nazwa_pliku_db = f"baza_pacjentow_{login}.db"
+    if os.path.exists(nazwa_pliku_db):
+        os.remove(nazwa_pliku_db)
+
+# Funkcje do odzyskiwania hasła
+def pobierz_pytanie(login):
+    conn = sqlite3.connect("system_uzytkownikow.db")
+    cursor = conn.cursor()
+    cursor.execute("SELECT pytanie FROM uzytkownicy WHERE login = ?", (login,))
+    wynik = cursor.fetchone()
+    conn.close()
+    return wynik[0] if wynik else None
+
+def zresetuj_haslo_z_odpowiedzia(login, odpowiedz, nowe_haslo):
+    odp_hash = hashlib.sha256(odpowiedz.strip().lower().encode('utf-8')).hexdigest()
+    conn = sqlite3.connect("system_uzytkownikow.db")
+    cursor = conn.cursor()
+    cursor.execute("SELECT odpowiedz_hash FROM uzytkownicy WHERE login = ?", (login,))
+    wynik = cursor.fetchone()
     
-    if wynik and wynik[0] == haslo_hash:
+    if wynik and wynik[0] == odp_hash:
+        nowe_haslo_hash = hashlib.sha256(nowe_haslo.encode('utf-8')).hexdigest()
+        cursor.execute("UPDATE uzytkownicy SET haslo_hash = ? WHERE login = ?", (nowe_haslo_hash, login))
+        conn.commit()
+        conn.close()
         return True
+    conn.close()
     return False
 
-# Uruchamiamy tworzenie bazy użytkowników
 inicjalizuj_baze_uzytkownikow()
 
 # 2. Stan sesji
@@ -192,53 +242,78 @@ if "zalogowany_terapeuta" not in st.session_state:
     st.session_state.zalogowany_terapeuta = None
 
 # 3. Interfejs Logowania i Rejestracji (Blokada dostępu)
+if "zalogowany_terapeuta" not in st.session_state:
+    st.session_state.zalogowany_terapeuta = None
+
 if st.session_state.zalogowany_terapeuta is None:
     st.title("🛡️ Panel dostępu FIZJO WORKOUT")
     
-    tab_logowanie, tab_rejestracja = st.tabs(["🔐 Zaloguj się", "📝 Załóż nowe konto"])
+    # Dodana trzecia zakładka!
+    tab_log, tab_rej, tab_odzysk = st.tabs(["🔐 Zaloguj się", "📝 Załóż nowe konto", "🆘 Odzyskaj hasło"])
     
-    # --- LOGOWANIE ---
-    with tab_logowanie:
-        st.markdown("#### Masz już profil?")
-        with st.form("formularz_logowania"):
+    with tab_log:
+        st.markdown("#### Wejdź do swojego gabinetu")
+        with st.form("form_log"):
             l_login = st.text_input("Twój login:").strip().lower().replace(" ", "_")
             l_haslo = st.text_input("Hasło:", type="password")
-            
-            if st.form_submit_button("Wejdź do gabinetu", type="primary"):
-                if l_login and l_haslo:
-                    if weryfikuj_logowanie(l_login, l_haslo):
-                        st.session_state.zalogowany_terapeuta = l_login
-                        st.rerun()
-                    else:
-                        st.error("Błędny login lub hasło! Spróbuj ponownie.")
+            if st.form_submit_button("Zaloguj się", type="primary"):
+                if weryfikuj_logowanie(l_login, l_haslo):
+                    st.session_state.zalogowany_terapeuta = l_login
+                    st.rerun()
                 else:
-                    st.warning("Uzupełnij wszystkie pola.")
+                    st.error("Błędny login lub hasło!")
 
-    # --- REJESTRACJA ---
-    with tab_rejestracja:
-        st.markdown("#### Pierwszy raz tutaj?")
-        st.info("Zarejestruj się, aby utworzyć swoją prywatną, szyfrowaną bazę pacjentów.")
-        with st.form("formularz_rejestracji"):
-            r_login = st.text_input("Wybierz unikalny login (np. jankowalski):").strip().lower().replace(" ", "_")
-            r_haslo1 = st.text_input("Utwórz hasło:", type="password")
-            r_haslo2 = st.text_input("Powtórz hasło:", type="password")
+    with tab_rej:
+        st.markdown("#### Utwórz szyfrowaną bazę")
+        with st.form("form_rej"):
+            r_login = st.text_input("Wybierz unikalny login:").strip().lower().replace(" ", "_")
+            r_haslo = st.text_input("Utwórz hasło:", type="password")
+            r_pytanie = st.selectbox("Wybierz pytanie pomocnicze (do odzyskania hasła):", [
+                "Jakie jest nazwisko panieńskie Twojej matki?",
+                "Jak wabił się Twój pierwszy zwierzak?",
+                "W jakim mieście się urodziłeś/aś?",
+                "Jaka była marka Twojego pierwszego samochodu?"
+            ])
+            r_odp = st.text_input("Odpowiedź na pytanie (zapamiętaj ją!):")
             
             if st.form_submit_button("Zarejestruj konto", type="secondary"):
-                if r_login and r_haslo1 and r_haslo2:
-                    if r_haslo1 != r_haslo2:
-                        st.error("Hasła nie są identyczne!")
-                    elif len(r_haslo1) < 4:
-                        st.error("Hasło musi mieć minimum 4 znaki.")
-                    else:
-                        sukces = zarejestruj_uzytkownika(r_login, r_haslo1)
-                        if sukces:
-                            st.success(f"Konto '{r_login}' zostało utworzone! Możesz się teraz zalogować w zakładce obok.")
+                if r_login and r_haslo and r_odp:
+                    if len(r_haslo) >= 4:
+                        if zarejestruj_uzytkownika(r_login, r_haslo, r_pytanie, r_odp):
+                            st.success(f"Konto '{r_login}' gotowe! Możesz się zalogować.")
                         else:
-                            st.error(f"Login '{r_login}' jest już zajęty. Wybierz inny.")
+                            st.error("Ten login jest już zajęty.")
+                    else:
+                        st.error("Hasło musi mieć min. 4 znaki.")
                 else:
-                    st.warning("Uzupełnij wszystkie pola.")
+                    st.warning("Uzupełnij wszystkie pola, w tym odpowiedź zabezpieczającą!")
+
+    with tab_odzysk:
+        st.markdown("#### Zresetuj zapomniane hasło")
+        o_login = st.text_input("Podaj swój login:", key="odzysk_login").strip().lower().replace(" ", "_")
+        
+        if o_login:
+            pytanie_z_bazy = pobierz_pytanie(o_login)
+            if pytanie_z_bazy and pytanie_z_bazy != "Brak":
+                st.info(f"Twoje pytanie pomocnicze: **{pytanie_z_bazy}**")
+                with st.form("form_reset"):
+                    o_odp = st.text_input("Wpisz odpowiedź:")
+                    o_nowe_haslo = st.text_input("Podaj nowe hasło:", type="password")
                     
-    st.stop() # <-- Blokuje wyświetlenie reszty aplikacji bez poprawnego logowania!
+                    if st.form_submit_button("Zresetuj hasło i zapisz nowe", type="primary"):
+                        if o_odp and len(o_nowe_haslo) >= 4:
+                            if zresetuj_haslo_z_odpowiedzia(o_login, o_odp, o_nowe_haslo):
+                                st.success("Hasło zostało zmienione! Możesz przejść do zakładki logowania.")
+                            else:
+                                st.error("Zła odpowiedź na pytanie pomocnicze!")
+                        else:
+                            st.warning("Wpisz odpowiedź i upewnij się, że nowe hasło ma min. 4 znaki.")
+            elif pytanie_z_bazy == "Brak":
+                st.error("To stare konto nie ma skonfigurowanego pytania pomocniczego.")
+            elif o_login != "":
+                st.warning("Nie znaleziono takiego użytkownika w bazie.")
+                
+    st.stop()
 
 if 'wylosowany_plan_cache' not in st.session_state:
     st.session_state.wylosowany_plan_cache = []
@@ -1296,8 +1371,33 @@ with st.sidebar:
         st.rerun()    
 
     st.success(f"👤 Zalogowano: **{st.session_state.zalogowany_terapeuta}**")
+    
+    with st.expander("⚙️ Ustawienia konta"):
+        tab_haslo, tab_usun_konto = st.tabs(["🔑 Zmień hasło", "🧨 Usuń konto"])
+        
+        with tab_haslo:
+            with st.form("form_zmiana_hasla"):
+                nowe_h1 = st.text_input("Nowe hasło:", type="password")
+                if st.form_submit_button("Zapisz nowe hasło", type="primary"):
+                    if len(nowe_h1) >= 4:
+                        zmien_haslo(st.session_state.zalogowany_terapeuta, nowe_h1)
+                        st.success("Hasło zostało zmienione!")
+                    else:
+                        st.error("Hasło musi mieć min. 4 znaki.")
+                        
+        with tab_usun_konto:
+            st.error("⚠️ UWAGA: Skasuje to bezpowrotnie Twój login oraz CAŁĄ BAZĘ PACJENTÓW.")
+            potwierdzenie = st.text_input("Wpisz swój login, aby potwierdzić:")
+            if st.button("🗑️ Trwale usuń moje konto", type="secondary"):
+                if potwierdzenie == st.session_state.zalogowany_terapeuta:
+                    usun_konto(st.session_state.zalogowany_terapeuta)
+                    st.session_state.clear()
+                    st.rerun()
+                else:
+                    st.error("Wpisany login nie zgadza się.")
+                    
     if st.button("🚪 Wyloguj się", use_container_width=True):
-        st.session_state.clear() # Czyści całą sesję
+        st.session_state.clear()
         st.rerun()
     st.divider()
     
