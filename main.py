@@ -249,8 +249,22 @@ if st.session_state.zalogowany_terapeuta is None:
                     st.error("To konto nie ma skonfigurowanego pytania pomocniczego.")
             except Exception:
                 st.warning("Nie znaleziono takiego użytkownika w bazie.")
-                
-    st.stop()
+  
+    st.stop() # To jest Twoja obecna linijka na końcu logowania
+
+# ==============================================================================
+# INICJALIZACJA ZMIENNYCH SESYJNYCH PAMIĘCI PODRĘCZNEJ
+# ==============================================================================
+if 'wylosowany_plan_cache' not in st.session_state:
+    st.session_state.wylosowany_plan_cache = []
+    
+if 'historia_wiadomosci' not in st.session_state:
+    st.session_state.historia_wiadomosci = [
+        {"role": "system", "content": "Jesteś wirtualnym asystentem w aplikacji dla fizjoterapeutów i trenerów 'Fizjo Workout Ultimate'."}
+    ]
+    
+if 'is_gym' not in st.session_state:
+    st.session_state.is_gym = False
 
 # ==============================================================================
 # BAZA FIZJOTERAPEUTYCZNA
