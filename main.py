@@ -172,6 +172,77 @@ def usun_pacjenta(pacjent_id):
     supabase.table("pacjenci").delete().eq("id", pacjent_id).execute()
 
 # ==============================================================================
+# STAN SESJI I BLOKADA DOSTĘPU (LOGOWANIE)
+# ==============================================================================
+if "zalogowany_terapeuta" not in st.session_state:
+    st.session_state.zalogowany_terapeuta = None
+
+if st.session_state.zalogowany_terapeuta is None:
+    st.title("🛡️ Panel dostępu FIZJO WORKOUT")
+    
+    tab_log, tab_rej, tab_odzysk = st.tabs(["🔐 Zaloguj się", "📝 Załóż nowe konto", "🆘 Odzyskaj hasło"])
+    
+    with tab_log:
+        st.markdown("#### Wejdź do swojego gabinetu")
+        with st.form("form_log"):
+            l_login = st.text_input("Twój login:").strip().lower().replace(" ", "_")
+            l_haslo = st.text_input("Hasło:", type="password")
+            if st.form_submit_button("Zaloguj się", type="primary"):
+                if weryfikuj_logowanie(l_login, l_haslo):
+                    st.session_state.zalogowany_terapeuta = l_login
+                    st.rerun()
+                else:
+                    st.error("Błędny login lub hasło!")
+
+    with tab_rej:
+        st.markdown("#### Utwórz konto w chmurze")
+        with st.form("form_rej"):
+            r_login = st.text_input("Wybierz unikalny login:").strip().lower().replace(" ", "_")
+            r_haslo = st.text_input("Utwórz hasło:", type="password")
+            r_pytanie = st.text_input("Wpisz własne pytanie pomocnicze (np. Ulubione danie z dzieciństwa?):")
+            r_odp = st.text_input("Odpowiedź na Twoje pytanie (zapamiętaj ją!):")
+            
+            if st.form_submit_button("Zarejestruj konto", type="secondary"):
+                if r_login and r_haslo and r_pytanie and r_odp:
+                    if len(r_haslo) >= 4:
+                        if zarejestruj_uzytkownika(r_login, r_haslo, r_pytanie, r_odp):
+                            st.success(f"Konto '{r_login}' gotowe! Możesz się zalogować.")
+                        else:
+                            st.error("Ten login jest już zajęty.")
+                    else:
+                        st.error("Hasło musi mieć min. 4 znaki.")
+                else:
+                    st.warning("Uzupełnij wszystkie pola, wymyśl pytanie i podaj odpowiedź zabezpieczającą!")
+
+    with tab_odzysk:
+        st.markdown("#### Zresetuj zapomniane hasło")
+        o_login = st.text_input("Podaj swój login:", key="odzysk_login").strip().lower().replace(" ", "_")
+        
+        if o_login:
+            try:
+                pytanie_z_bazy = pobierz_pytanie(o_login)
+                if pytanie_z_bazy and pytanie_z_bazy != "Brak":
+                    st.info(f"Twoje pytanie pomocnicze: **{pytanie_z_bazy}**")
+                    with st.form("form_reset"):
+                        o_odp = st.text_input("Wpisz odpowiedź:")
+                        o_nowe_haslo = st.text_input("Podaj nowe hasło:", type="password")
+                        
+                        if st.form_submit_button("Zresetuj hasło i zapisz nowe", type="primary"):
+                            if o_odp and len(o_nowe_haslo) >= 4:
+                                if zresetuj_haslo_z_odpowiedzia(o_login, o_odp, o_nowe_haslo):
+                                    st.success("Hasło zostało zmienione! Możesz przejść do zakładki logowania.")
+                                else:
+                                    st.error("Zła odpowiedź na pytanie pomocnicze!")
+                            else:
+                                st.warning("Wpisz odpowiedź i upewnij się, że nowe hasło ma min. 4 znaki.")
+                elif pytanie_z_bazy == "Brak":
+                    st.error("To konto nie ma skonfigurowanego pytania pomocniczego.")
+            except Exception:
+                st.warning("Nie znaleziono takiego użytkownika w bazie.")
+                
+    st.stop()
+
+# ==============================================================================
 # BAZA FIZJOTERAPEUTYCZNA
 # ==============================================================================
 BAZA_FIZJO = {
