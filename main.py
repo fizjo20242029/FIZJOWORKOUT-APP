@@ -22,107 +22,7 @@ from datetime import datetime
 
 DB_NAME = "fizjo_workout.db"
 
-# ==============================================================================
-# BAZA DANYCH PACJENTÓW (SQLITE) - WERSJA DLA WIELU UŻYTKOWNIKÓW
-# ==============================================================================
-import sqlite3
-import json
-from datetime import datetime
 
-# Funkcja dynamicznie przydzielająca plik bazy na podstawie loginu
-def get_db_name():
-    user = st.session_state.get("zalogowany_terapeuta", "domyslny")
-    return f"baza_pacjentow_{user}.db"
-
-def inicjalizuj_baze():
-    conn = sqlite3.connect(get_db_name())
-    cursor = conn.cursor()
-    
-    cursor.execute("""CREATE TABLE IF NOT EXISTS pacjenci (
-        id INTEGER PRIMARY KEY AUTOINCREMENT, imie TEXT NOT NULL, nazwisko TEXT NOT NULL,
-        wiek INTEGER, telefon TEXT, email TEXT, cel_terapii TEXT, przeciwwskazania TEXT, data_rejestracji TEXT)""")
-        
-    cursor.execute("""CREATE TABLE IF NOT EXISTS historia_wizyt (
-        id INTEGER PRIMARY KEY AUTOINCREMENT, pacjent_id INTEGER, data_wizyty TEXT, notatka TEXT,
-        FOREIGN KEY (pacjent_id) REFERENCES pacjenci(id) ON DELETE CASCADE)""")
-        
-    cursor.execute("""CREATE TABLE IF NOT EXISTS zapisane_plany (
-        id INTEGER PRIMARY KEY AUTOINCREMENT, pacjent_id INTEGER, data_zapisu TEXT, profil_planu TEXT,
-        typ_kliniczny TEXT, plan_json TEXT, FOREIGN KEY (pacjent_id) REFERENCES pacjenci(id) ON DELETE CASCADE)""")
-        
-    try: cursor.execute("ALTER TABLE zapisane_plany ADD COLUMN typ_kliniczny TEXT DEFAULT 'Ogólny'")
-    except sqlite3.OperationalError: pass
-        
-    conn.commit()
-    conn.close()
-
-# Uruchamiamy inicjalizację. Ponieważ wyżej jest st.stop(), wywoła się tylko dla zalogowanych!
-inicjalizuj_baze()
-
-def dodaj_pacjenta(imie, nazwisko, wiek, telefon, email, cel, przeciwwskazania):
-    conn = sqlite3.connect(get_db_name())
-    cursor = conn.cursor()
-    data_teraz = datetime.now().strftime("%Y-%m-%d %H:%M")
-    cursor.execute("INSERT INTO pacjenci (imie, nazwisko, wiek, telefon, email, cel_terapii, przeciwwskazania, data_rejestracji) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", 
-                   (imie, nazwisko, wiek, telefon, email, cel, przeciwwskazania, data_teraz))
-    conn.commit()
-    conn.close()
-
-def pobierz_wszystkich_pacjentow(szukaj_fraza=""):
-    conn = sqlite3.connect(get_db_name())
-    cursor = conn.cursor()
-    if szukaj_fraza:
-        cursor.execute("SELECT id, imie, nazwisko FROM pacjenci WHERE imie LIKE ? OR nazwisko LIKE ? ORDER BY nazwisko ASC", (f"%{szukaj_fraza}%", f"%{szukaj_fraza}%"))
-    else:
-        cursor.execute("SELECT id, imie, nazwisko FROM pacjenci ORDER BY nazwisko ASC")
-    wyszukani = cursor.fetchall()
-    conn.close()
-    return wyszukani
-
-def pobierz_szczegoly_pacjenta(pacjent_id):
-    conn = sqlite3.connect(get_db_name())
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM pacjenci WHERE id = ?", (pacjent_id,))
-    pacjent = cursor.fetchone()
-    cursor.execute("SELECT data_wizyty, notatka FROM historia_wizyt WHERE pacjent_id = ? ORDER BY id DESC", (pacjent_id,))
-    notatki = cursor.fetchall()
-    cursor.execute("SELECT id, data_zapisu, profil_planu, typ_kliniczny, plan_json FROM zapisane_plany WHERE pacjent_id = ? ORDER BY id DESC", (pacjent_id,))
-    plany = cursor.fetchall()
-    conn.close()
-    return pacjent, notatki, plany
-
-def dodaj_notatke_wizyty(pacjent_id, notatka):
-    conn = sqlite3.connect(get_db_name())
-    cursor = conn.cursor()
-    data_teraz = datetime.now().strftime("%Y-%m-%d %H:%M")
-    cursor.execute("INSERT INTO historia_wizyt (pacjent_id, data_wizyty, notatka) VALUES (?, ?, ?)", (pacjent_id, data_teraz, notatka))
-    conn.commit()
-    conn.close()
-
-def zapisz_plan_pacjenta(pacjent_id, profil_planu, typ_kliniczny, lista_plan_cache):
-    conn = sqlite3.connect(get_db_name())
-    cursor = conn.cursor()
-    data_teraz = datetime.now().strftime("%Y-%m-%d %H:%M")
-    plan_tekst_json = json.dumps(lista_plan_cache, ensure_ascii=False)
-    cursor.execute("INSERT INTO zapisane_plany (pacjent_id, data_zapisu, profil_planu, typ_kliniczny, plan_json) VALUES (?, ?, ?, ?, ?)", 
-                   (pacjent_id, data_teraz, profil_planu, typ_kliniczny, plan_tekst_json))
-    conn.commit()
-    conn.close()
-
-def aktualizuj_pacjenta(pacjent_id, imie, nazwisko, wiek, telefon, email, cel, przeciwwskazania):
-    conn = sqlite3.connect(get_db_name())
-    cursor = conn.cursor()
-    cursor.execute("UPDATE pacjenci SET imie = ?, nazwisko = ?, wiek = ?, telefon = ?, email = ?, cel_terapii = ?, przeciwwskazania = ? WHERE id = ?", 
-                   (imie, nazwisko, wiek, telefon, email, cel, przeciwwskazania, pacjent_id))
-    conn.commit()
-    conn.close()
-
-def usun_pacjenta(pacjent_id):
-    conn = sqlite3.connect(get_db_name())
-    cursor = conn.cursor()
-    cursor.execute("DELETE FROM pacjenci WHERE id = ?", (pacjent_id,))
-    conn.commit()
-    conn.close()
 
 # ==============================================================================
 # KONFIGURACJA STRONY STREAMLIT
@@ -147,194 +47,129 @@ ukryj_menu_style = """
 st.markdown(ukryj_menu_style, unsafe_allow_html=True)
 
 # ==============================================================================
-# SYSTEM LOGOWANIA, REJESTRACJI I IZOLACJI DANYCH
+# BAZA DANYCH W CHMURZE (SUPABASE) - SYSTEM KONT I KARTOTEK
 # ==============================================================================
-# ==============================================================================
-# SYSTEM LOGOWANIA, REJESTRACJI, ODZYSKIWANIA I IZOLACJI DANYCH
-# ==============================================================================
-import sqlite3
-import hashlib
 import os
+import json
+import hashlib
+from datetime import datetime
+import streamlit as st
+from supabase import create_client, Client
 
-def inicjalizuj_baze_uzytkownikow():
-    conn = sqlite3.connect("system_uzytkownikow.db")
-    cursor = conn.cursor()
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS uzytkownicy (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            login TEXT UNIQUE NOT NULL,
-            haslo_hash TEXT NOT NULL,
-            pytanie TEXT,
-            odpowiedz_hash TEXT
-        )
-    """)
-    # Automatyczna migracja - dodanie kolumn, jeśli baza została już wcześniej utworzona
-    try:
-        cursor.execute("ALTER TABLE uzytkownicy ADD COLUMN pytanie TEXT DEFAULT 'Brak'")
-        cursor.execute("ALTER TABLE uzytkownicy ADD COLUMN odpowiedz_hash TEXT DEFAULT 'Brak'")
-    except sqlite3.OperationalError:
-        pass
-    conn.commit()
-    conn.close()
+# 1. Połączenie z chmurą
+@st.cache_resource
+def init_connection():
+    url = st.secrets["SUPABASE_URL"]
+    key = st.secrets["SUPABASE_KEY"]
+    return create_client(url, key)
 
+supabase = init_connection()
+
+# --- A. FUNKCJE SYSTEMU UŻYTKOWNIKÓW ---
 def ma_konto(login):
-    conn = sqlite3.connect("system_uzytkownikow.db")
-    cursor = conn.cursor()
-    cursor.execute("SELECT id FROM uzytkownicy WHERE login = ?", (login,))
-    wynik = cursor.fetchone()
-    conn.close()
-    return wynik is not None
+    res = supabase.table("uzytkownicy").select("id").eq("login", login).execute()
+    return len(res.data) > 0
 
 def zarejestruj_uzytkownika(login, haslo, pytanie, odpowiedz):
     if ma_konto(login): return False
-    
     haslo_hash = hashlib.sha256(haslo.encode('utf-8')).hexdigest()
-    # Zabezpieczamy też odpowiedź, by nikt z pliku nie odczytał np. imienia matki
     odp_hash = hashlib.sha256(odpowiedz.strip().lower().encode('utf-8')).hexdigest()
     
-    conn = sqlite3.connect("system_uzytkownikow.db")
-    cursor = conn.cursor()
-    cursor.execute("INSERT INTO uzytkownicy (login, haslo_hash, pytanie, odpowiedz_hash) VALUES (?, ?, ?, ?)", 
-                   (login, haslo_hash, pytanie, odp_hash))
-    conn.commit()
-    conn.close()
+    supabase.table("uzytkownicy").insert({
+        "login": login, "haslo_hash": haslo_hash, "pytanie": pytanie, "odpowiedz_hash": odp_hash
+    }).execute()
     return True
 
 def weryfikuj_logowanie(login, haslo):
     haslo_hash = hashlib.sha256(haslo.encode('utf-8')).hexdigest()
-    conn = sqlite3.connect("system_uzytkownikow.db")
-    cursor = conn.cursor()
-    cursor.execute("SELECT haslo_hash FROM uzytkownicy WHERE login = ?", (login,))
-    wynik = cursor.fetchone()
-    conn.close()
-    return wynik and wynik[0] == haslo_hash
+    res = supabase.table("uzytkownicy").select("haslo_hash").eq("login", login).execute()
+    if res.data and res.data[0]['haslo_hash'] == haslo_hash:
+        return True
+    return False
 
 def zmien_haslo(login, nowe_haslo):
     haslo_hash = hashlib.sha256(nowe_haslo.encode('utf-8')).hexdigest()
-    conn = sqlite3.connect("system_uzytkownikow.db")
-    cursor = conn.cursor()
-    cursor.execute("UPDATE uzytkownicy SET haslo_hash = ? WHERE login = ?", (haslo_hash, login))
-    conn.commit()
-    conn.close()
+    supabase.table("uzytkownicy").update({"haslo_hash": haslo_hash}).eq("login", login).execute()
 
 def usun_konto(login):
-    conn = sqlite3.connect("system_uzytkownikow.db")
-    cursor = conn.cursor()
-    cursor.execute("DELETE FROM uzytkownicy WHERE login = ?", (login,))
-    conn.commit()
-    conn.close()
-    nazwa_pliku_db = f"baza_pacjentow_{login}.db"
-    if os.path.exists(nazwa_pliku_db):
-        os.remove(nazwa_pliku_db)
+    # Kaskadowe usunięcie konta i wszystkich przypisanych pacjentów z chmury
+    supabase.table("uzytkownicy").delete().eq("login", login).execute()
+    supabase.table("pacjenci").delete().eq("terapeuta_login", login).execute()
 
-# Funkcje do odzyskiwania hasła
 def pobierz_pytanie(login):
-    conn = sqlite3.connect("system_uzytkownikow.db")
-    cursor = conn.cursor()
-    cursor.execute("SELECT pytanie FROM uzytkownicy WHERE login = ?", (login,))
-    wynik = cursor.fetchone()
-    conn.close()
-    return wynik[0] if wynik else None
+    res = supabase.table("uzytkownicy").select("pytanie").eq("login", login).execute()
+    return res.data[0]['pytanie'] if res.data else None
 
 def zresetuj_haslo_z_odpowiedzia(login, odpowiedz, nowe_haslo):
     odp_hash = hashlib.sha256(odpowiedz.strip().lower().encode('utf-8')).hexdigest()
-    conn = sqlite3.connect("system_uzytkownikow.db")
-    cursor = conn.cursor()
-    cursor.execute("SELECT odpowiedz_hash FROM uzytkownicy WHERE login = ?", (login,))
-    wynik = cursor.fetchone()
+    res = supabase.table("uzytkownicy").select("odpowiedz_hash").eq("login", login).execute()
     
-    if wynik and wynik[0] == odp_hash:
+    if res.data and res.data[0]['odpowiedz_hash'] == odp_hash:
         nowe_haslo_hash = hashlib.sha256(nowe_haslo.encode('utf-8')).hexdigest()
-        cursor.execute("UPDATE uzytkownicy SET haslo_hash = ? WHERE login = ?", (nowe_haslo_hash, login))
-        conn.commit()
-        conn.close()
+        supabase.table("uzytkownicy").update({"haslo_hash": nowe_haslo_hash}).eq("login", login).execute()
         return True
-    conn.close()
     return False
 
-inicjalizuj_baze_uzytkownikow()
+# --- B. FUNKCJE KARTOTEKI PACJENTÓW ---
+def dodaj_pacjenta(imie, nazwisko, wiek, telefon, email, cel, przeciwwskazania):
+    terapeuta = st.session_state.zalogowany_terapeuta
+    data_teraz = datetime.now().strftime("%Y-%m-%d %H:%M")
+    supabase.table("pacjenci").insert({
+        "terapeuta_login": terapeuta, "imie": imie, "nazwisko": nazwisko, "wiek": wiek,
+        "telefon": telefon, "email": email, "cel_terapii": cel, 
+        "przeciwwskazania": przeciwwskazania, "data_rejestracji": data_teraz
+    }).execute()
 
-# 2. Stan sesji
-if "zalogowany_terapeuta" not in st.session_state:
-    st.session_state.zalogowany_terapeuta = None
-
-# 3. Interfejs Logowania i Rejestracji (Blokada dostępu)
-if "zalogowany_terapeuta" not in st.session_state:
-    st.session_state.zalogowany_terapeuta = None
-
-if st.session_state.zalogowany_terapeuta is None:
-    st.title("🛡️ Panel dostępu FIZJO WORKOUT")
+def pobierz_wszystkich_pacjentow(szukaj_fraza=""):
+    terapeuta = st.session_state.zalogowany_terapeuta
+    res = supabase.table("pacjenci").select("id, imie, nazwisko").eq("terapeuta_login", terapeuta).execute()
+    dane = res.data
     
-    # Dodana trzecia zakładka!
-    tab_log, tab_rej, tab_odzysk = st.tabs(["🔐 Zaloguj się", "📝 Załóż nowe konto", "🆘 Odzyskaj hasło"])
-    
-    with tab_log:
-        st.markdown("#### Wejdź do swojego gabinetu")
-        with st.form("form_log"):
-            l_login = st.text_input("Twój login:").strip().lower().replace(" ", "_")
-            l_haslo = st.text_input("Hasło:", type="password")
-            if st.form_submit_button("Zaloguj się", type="primary"):
-                if weryfikuj_logowanie(l_login, l_haslo):
-                    st.session_state.zalogowany_terapeuta = l_login
-                    st.rerun()
-                else:
-                    st.error("Błędny login lub hasło!")
-
-    with tab_rej:
-        st.markdown("#### Utwórz szyfrowaną bazę")
-        with st.form("form_rej"):
-            r_login = st.text_input("Wybierz unikalny login:").strip().lower().replace(" ", "_")
-            r_haslo = st.text_input("Utwórz hasło:", type="password")
-            
-            # ZMIANA: Zamiast listy (selectbox), dajemy pole tekstowe (text_input)
-            r_pytanie = st.text_input("Wpisz własne pytanie pomocnicze (np. Ulubione danie z dzieciństwa?):")
-            r_odp = st.text_input("Odpowiedź na Twoje pytanie (zapamiętaj ją!):")
-            
-            if st.form_submit_button("Zarejestruj konto", type="secondary"):
-                if r_login and r_haslo and r_pytanie and r_odp:
-                    if len(r_haslo) >= 4:
-                        if zarejestruj_uzytkownika(r_login, r_haslo, r_pytanie, r_odp):
-                            st.success(f"Konto '{r_login}' gotowe! Możesz się zalogować.")
-                        else:
-                            st.error("Ten login jest już zajęty.")
-                    else:
-                        st.error("Hasło musi mieć min. 4 znaki.")
-                else:
-                    st.warning("Uzupełnij wszystkie pola, wymyśl pytanie i podaj odpowiedź zabezpieczającą!")
-
-    with tab_odzysk:
-        st.markdown("#### Zresetuj zapomniane hasło")
-        o_login = st.text_input("Podaj swój login:", key="odzysk_login").strip().lower().replace(" ", "_")
+    if szukaj_fraza:
+        fraza = szukaj_fraza.lower()
+        dane = [p for p in dane if fraza in p['imie'].lower() or fraza in p['nazwisko'].lower()]
         
-        if o_login:
-            pytanie_z_bazy = pobierz_pytanie(o_login)
-            if pytanie_z_bazy and pytanie_z_bazy != "Brak":
-                st.info(f"Twoje pytanie pomocnicze: **{pytanie_z_bazy}**")
-                with st.form("form_reset"):
-                    o_odp = st.text_input("Wpisz odpowiedź:")
-                    o_nowe_haslo = st.text_input("Podaj nowe hasło:", type="password")
-                    
-                    if st.form_submit_button("Zresetuj hasło i zapisz nowe", type="primary"):
-                        if o_odp and len(o_nowe_haslo) >= 4:
-                            if zresetuj_haslo_z_odpowiedzia(o_login, o_odp, o_nowe_haslo):
-                                st.success("Hasło zostało zmienione! Możesz przejść do zakładki logowania.")
-                            else:
-                                st.error("Zła odpowiedź na pytanie pomocnicze!")
-                        else:
-                            st.warning("Wpisz odpowiedź i upewnij się, że nowe hasło ma min. 4 znaki.")
-            elif pytanie_z_bazy == "Brak":
-                st.error("To stare konto nie ma skonfigurowanego pytania pomocniczego.")
-            elif o_login != "":
-                st.warning("Nie znaleziono takiego użytkownika w bazie.")
-                
-    st.stop()
+    dane.sort(key=lambda x: x['nazwisko'].lower())
+    return [(p['id'], p['imie'], p['nazwisko']) for p in dane]
 
-if 'wylosowany_plan_cache' not in st.session_state:
-    st.session_state.wylosowany_plan_cache = []
-if 'historia_wiadomosci' not in st.session_state:
-    st.session_state.historia_wiadomosci = [
-        {"role": "system", "content": "Jesteś wirtualnym asystentem w aplikacji dla fizjoterapeutów i trenerów 'Fizjo Workout Ultimate'."}
-    ]
+def pobierz_szczegoly_pacjenta(pacjent_id):
+    # 1. Dane pacjenta
+    p_res = supabase.table("pacjenci").select("*").eq("id", pacjent_id).execute()
+    p = p_res.data[0]
+    pacjent_tuple = (p['id'], p['imie'], p['nazwisko'], p['wiek'], p['telefon'], p['email'], p['cel_terapii'], p['przeciwwskazania'], p['data_rejestracji'])
+    
+    # 2. Historia notatek
+    n_res = supabase.table("historia_wizyt").select("data_wizyty, notatka").eq("pacjent_id", pacjent_id).order("id", desc=True).execute()
+    notatki_tuples = [(n['data_wizyty'], n['notatka']) for n in n_res.data]
+    
+    # 3. Zapisane plany
+    pl_res = supabase.table("zapisane_plany").select("id, data_zapisu, profil_planu, typ_kliniczny, plan_json").eq("pacjent_id", pacjent_id).order("id", desc=True).execute()
+    plany_tuples = [(pl['id'], pl['data_zapisu'], pl['profil_planu'], pl['typ_kliniczny'], pl['plan_json']) for pl in pl_res.data]
+    
+    return pacjent_tuple, notatki_tuples, plany_tuples
+
+def dodaj_notatke_wizyty(pacjent_id, notatka):
+    data_teraz = datetime.now().strftime("%Y-%m-%d %H:%M")
+    supabase.table("historia_wizyt").insert({
+        "pacjent_id": pacjent_id, "data_wizyty": data_teraz, "notatka": notatka
+    }).execute()
+
+def zapisz_plan_pacjenta(pacjent_id, profil_planu, typ_kliniczny, lista_plan_cache):
+    data_teraz = datetime.now().strftime("%Y-%m-%d %H:%M")
+    plan_tekst_json = json.dumps(lista_plan_cache, ensure_ascii=False)
+    supabase.table("zapisane_plany").insert({
+        "pacjent_id": pacjent_id, "data_zapisu": data_teraz, "profil_planu": profil_planu,
+        "typ_kliniczny": typ_kliniczny, "plan_json": plan_tekst_json
+    }).execute()
+
+def aktualizuj_pacjenta(pacjent_id, imie, nazwisko, wiek, telefon, email, cel, przeciwwskazania):
+    supabase.table("pacjenci").update({
+        "imie": imie, "nazwisko": nazwisko, "wiek": wiek, "telefon": telefon, 
+        "email": email, "cel_terapii": cel, "przeciwwskazania": przeciwwskazania
+    }).eq("id", pacjent_id).execute()
+
+def usun_pacjenta(pacjent_id):
+    supabase.table("pacjenci").delete().eq("id", pacjent_id).execute()
 
 # ==============================================================================
 # BAZA FIZJOTERAPEUTYCZNA
