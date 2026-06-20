@@ -59,9 +59,15 @@ from supabase import create_client, Client
 # 1. Połączenie z chmurą
 @st.cache_resource
 def init_connection():
-    url = st.secrets["SUPABASE_URL"]
-    key = st.secrets["SUPABASE_KEY"]
-    return create_client(url, key)
+    # Pobieramy dane z ustawień Streamlit
+    su_url = st.secrets["SUPABASE_URL"]
+    su_key = st.secrets["SUPABASE_KEY"]
+    
+    # "Szorowanie": usuwamy niewidoczne spacje, entery, cudzysłowy i ukośniki na końcu
+    czysty_url = str(su_url).strip().strip('"').strip("'").rstrip("/")
+    czysty_key = str(su_key).strip().strip('"').strip("'")
+    
+    return create_client(czysty_url, czysty_key)
 
 supabase = init_connection()
 
