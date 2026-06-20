@@ -32,19 +32,53 @@ st.set_page_config(page_title="Fizjo Workout Ultimate", page_icon="💪", layout
 # ==============================================================================
 # UKRYWANIE DOMYŚLNEGO MENU STREAMLIT (GITHUB, DEPLOY, STOPKA)
 # ==============================================================================
-ukryj_menu_style = """
+import base64
+
+# ==============================================================================
+# UKRYWANIE DOMYŚLNEGO MENU I GRAFIKA W PRAWYM ROGU
+# ==============================================================================
+try:
+    # Wczytujemy Twoją grafikę
+    with open("background.jpg", "rb") as f:
+        zakodowane_logo_top = base64.b64encode(f.read()).decode()
+        
+    ukryj_menu_style = f"""
     <style>
-    /* Ukrywa menu z prawej strony (trzy kropki/kreski) */
-    #MainMenu {visibility: hidden;}
-    
-    /* Ukrywa przycisk "Deploy" */
-    .stAppDeployButton {display:none;}
-    
-    /* Ukrywa napis "Made with Streamlit" na dole */
-    footer {visibility: hidden;}
+        /* Ukrywamy standardowe elementy */
+        #MainMenu {{visibility: hidden;}}
+        footer {{visibility: hidden;}}
+        .stAppDeployButton {{display:none;}}
+        
+        /* Nasza graficzna nakładka */
+        .nakladka-logo {{
+            position: fixed;
+            top: 0px;
+            right: 0px;
+            width: 220px;      /* Szerokość - dopasuj, by przykryć przyciski GitHuba */
+            height: 60px;      /* Wysokość górnego paska Streamlit */
+            z-index: 9999999;  /* Wypychamy na wierzch */
+            border-bottom-left-radius: 12px;
+            overflow: hidden;  /* Obcina rogi obrazka do zaokrąglenia */
+            box-shadow: -2px 2px 5px rgba(0,0,0,0.1); /* Lekki cień dla elegancji */
+        }}
+        
+        .nakladka-logo img {{
+            width: 100%;
+            height: 100%;
+            object-fit: cover; /* Sprawia, że obrazek ładnie wypełnia prostokąt, nie spłaszczając się */
+            object-position: center;
+        }}
     </style>
-"""
-st.markdown(ukryj_menu_style, unsafe_allow_html=True)
+
+    <div class="nakladka-logo">
+        <img src="data:image/jpeg;base64,{zakodowane_logo_top}">
+    </div>
+    """
+    st.markdown(ukryj_menu_style, unsafe_allow_html=True)
+
+except FileNotFoundError:
+    # Zabezpieczenie: jeśli pliku nie ma, po prostu ukrywamy menu klasycznie
+    st.markdown("<style>#MainMenu {visibility: hidden;} footer {visibility: hidden;} .stAppDeployButton {display:none;}</style>", unsafe_allow_html=True)
 
 # ==============================================================================
 # BAZA DANYCH W CHMURZE (SUPABASE) - SYSTEM KONT I KARTOTEK
