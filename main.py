@@ -82,10 +82,14 @@ def zarejestruj_uzytkownika(login, haslo, pytanie, odpowiedz):
 
 def weryfikuj_logowanie(login, haslo):
     haslo_hash = hashlib.sha256(haslo.encode('utf-8')).hexdigest()
-    res = supabase.table("uzytkownicy").select("haslo_hash").eq("login", login).execute()
-    if res.data and res.data[0]['haslo_hash'] == haslo_hash:
-        return True
-    return False
+    try:
+        res = supabase.table("uzytkownicy").select("haslo_hash").eq("login", login).execute()
+        if res.data and res.data[0]['haslo_hash'] == haslo_hash:
+            return True
+        return False
+    except Exception as e:
+        st.error(f"🚨 Szczegółowy błąd z Supabase podczas logowania: {e}")
+        st.stop()
 
 def zmien_haslo(login, nowe_haslo):
     haslo_hash = hashlib.sha256(nowe_haslo.encode('utf-8')).hexdigest()
